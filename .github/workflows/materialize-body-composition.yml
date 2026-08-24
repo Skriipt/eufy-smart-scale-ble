@@ -1,3 +1,4 @@
+# Temporary bootstrap workflow; removed after materialization.
 name: Materialize body composition implementation
 
 on:
