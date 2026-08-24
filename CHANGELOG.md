@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file.
 
 The project follows semantic versioning. HACS versions are published as GitHub Releases using `v<version>` tags.
 
+## [0.2.2] - 2026-08-24
+
+### Fixed
+
+- Removed an accidental development marker file from the public repository and release payload.
+
+### Changed
+
+- No integration behavior or body-composition calculations changed from `0.2.1`.
+
 ## [0.2.1] - 2026-08-24
 
 ### Changed
@@ -11,7 +21,7 @@ The project follows semantic versioning. HACS versions are published as GitHub R
 - Calibrated the local body-composition algorithm against a second real Eufy Smart Scale P3 measurement (`85.45 kg`, `454.5 Ω`).
 - Changed the internal weight conversion to truncate to Eufy's 0.1 kg fixed-point input instead of rounding it.
 - Truncated the water base value at the fixed-point boundary before applying Eufy's water coefficient, aligning body water and skeletal muscle mass with EufyLife.
-- Preserved fractional BMR intermediates and truncate only the displayed final value, aligning the observed BMR output.
+- Preserved fractional BMR intermediates and truncated only the displayed final value, aligning the observed BMR output.
 - Calibrated the protein estimate coefficient to `0.3133`, reproducing `15.2%` and `15.3%` for the two current real-world reference measurements.
 - Bumped the calculation identifier to `eufy_p3_compatible_v2` so Home Assistant entity attributes show which calculation revision produced a value.
 
