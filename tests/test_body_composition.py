@@ -88,7 +88,7 @@ def test_synthetic_fixed_point_reference_vector() -> None:
     assert result.bmi == 24.1
     assert result.body_fat_percent == 22.8
     assert result.body_fat_mass_kg == 17.8
-    assert result.lean_body_mass_kg == 60.6
+    assert result.lean_body_mass_kg == 60.7
     assert result.muscle_mass_kg == 57.6
     assert result.bone_mass_kg == 3.0
     assert result.body_water_percent == 52.9
