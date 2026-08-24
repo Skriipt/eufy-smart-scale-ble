@@ -31,7 +31,7 @@ def test_male_reference_vector() -> None:
     assert result.bone_mass_kg == 2.8
     assert result.muscle_mass_kg == 54.0
     assert result.body_water_percent == 53.9
-    assert result.protein_percent == 14.5
+    assert result.protein_percent == 16.6
     assert result.skeletal_muscle_mass_kg == 29.6
     assert result.subcutaneous_fat_percent == 18.7
     assert result.bmr_kcal_per_day == 1497
@@ -50,8 +50,8 @@ def test_female_reference_vector() -> None:
     assert result.body_fat_percent == 28.2
     assert result.body_fat_mass_kg == 16.9
     assert result.muscle_mass_kg == 40.7
-    assert result.body_water_percent == 49.2
-    assert result.bmr_kcal_per_day == 1232
+    assert result.body_water_percent == 49.1
+    assert result.bmr_kcal_per_day == 1231
     assert result.visceral_fat_level == 4
     assert result.body_type is BodyType.STANDARD_MUSCULAR
 
@@ -73,7 +73,7 @@ def test_athlete_mode_uses_adjusted_branch() -> None:
 
     assert athlete.body_fat_percent == 15.9
     assert athlete.bone_mass_kg == 3.4
-    assert athlete.skeletal_muscle_mass_kg == 35.7
+    assert athlete.skeletal_muscle_mass_kg == 35.6
     assert athlete.bmr_kcal_per_day == 1841
     assert athlete.body_fat_percent < normal.body_fat_percent
     assert athlete.bmr_kcal_per_day > normal.bmr_kcal_per_day
@@ -91,10 +91,38 @@ def test_supplied_eufy_measurement_is_reproduced_with_calibrated_impedance() -> 
     assert result.lean_body_mass_kg == 61.7
     assert result.muscle_mass_kg == 58.6
     assert result.bone_mass_kg == 3.1
-    assert result.body_water_percent == 49.6
+    assert result.body_water_percent == 49.5
+    assert result.bmr_kcal_per_day == 1771
     assert result.visceral_fat_level == 11
-    assert result.skeletal_muscle_mass_kg == 32.4
+    assert result.protein_percent == 15.2
+    assert result.skeletal_muscle_mass_kg == 32.3
     assert result.subcutaneous_fat_percent == 24.5
+    assert result.body_age_years == 30
+    assert result.body_type is BodyType.OBESE
+
+
+def test_second_observed_eufy_measurement_matches_app() -> None:
+    result = calculate_body_composition(
+        BodyCompositionProfile(sex=Sex.MALE, height_cm=175, age=28),
+        BodyMeasurement(
+            weight_kg=85.45,
+            impedance_ohm=454.5,
+            measured_at=MEASURED_AT,
+        ),
+    )
+
+    assert result.bmi == 27.8
+    assert result.body_fat_percent == 27.5
+    assert result.body_fat_mass_kg == 23.4
+    assert result.lean_body_mass_kg == 62.0
+    assert result.muscle_mass_kg == 58.9
+    assert result.bone_mass_kg == 3.1
+    assert result.body_water_percent == 49.6
+    assert result.bmr_kcal_per_day == 1773
+    assert result.visceral_fat_level == 11
+    assert result.protein_percent == 15.3
+    assert result.skeletal_muscle_mass_kg == 32.4
+    assert result.subcutaneous_fat_percent == 24.3
     assert result.body_age_years == 30
     assert result.body_type is BodyType.OBESE
 
