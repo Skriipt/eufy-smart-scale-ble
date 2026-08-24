@@ -14,8 +14,8 @@ from custom_components.eufy_p3_ble.storage import (
 )
 
 MEASUREMENT = BodyMeasurement(
-    weight_kg=85.3,
-    impedance_ohm=482.0,
+    weight_kg=78.45,
+    impedance_ohm=510.0,
     measured_at=datetime(2026, 8, 24, 8, 30, 15, tzinfo=UTC),
 )
 
@@ -24,8 +24,8 @@ def test_measurement_round_trip() -> None:
     stored = serialize_measurement(MEASUREMENT)
 
     assert stored == {
-        "weight_kg": 85.3,
-        "impedance_ohm": 482.0,
+        "weight_kg": 78.45,
+        "impedance_ohm": 510.0,
         "measured_at": "2026-08-24T08:30:15+00:00",
     }
     assert deserialize_measurement(stored) == MEASUREMENT
@@ -37,20 +37,20 @@ def test_measurement_round_trip() -> None:
         None,
         [],
         {},
-        {"weight_kg": 85.3},
+        {"weight_kg": 78.45},
         {
-            "weight_kg": "85.3",
-            "impedance_ohm": 482.0,
+            "weight_kg": "78.45",
+            "impedance_ohm": 510.0,
             "measured_at": "2026-08-24T08:30:15+00:00",
         },
         {
-            "weight_kg": 85.3,
-            "impedance_ohm": 482.0,
+            "weight_kg": 78.45,
+            "impedance_ohm": 510.0,
             "measured_at": "not-a-date",
         },
         {
-            "weight_kg": 85.3,
-            "impedance_ohm": 482.0,
+            "weight_kg": 78.45,
+            "impedance_ohm": 510.0,
             "measured_at": "2026-08-24T08:30:15",
         },
     ],
@@ -73,8 +73,8 @@ def test_invalid_impedance_is_ignored(impedance: float) -> None:
 
 def test_serialize_requires_timezone_aware_timestamp() -> None:
     measurement = BodyMeasurement(
-        weight_kg=85.3,
-        impedance_ohm=482.0,
+        weight_kg=78.45,
+        impedance_ohm=510.0,
         measured_at=datetime(2026, 8, 24, 8, 30),
     )
 
