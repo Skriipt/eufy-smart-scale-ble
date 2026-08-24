@@ -8,6 +8,12 @@ on:
     paths:
       - ".bootstrap/body-composition.part-*"
       - ".github/workflows/materialize-body-composition.yml"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".bootstrap/body-composition.part-*"
+      - ".github/workflows/materialize-body-composition.yml"
 
 permissions:
   contents: write
