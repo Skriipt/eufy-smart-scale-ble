@@ -29,3 +29,5 @@ jobs:
           git add -A
           git commit -m "feat: implement Eufy P3 Home Assistant integration"
           git push
+
+# Triggered after the workflow exists on the branch.
