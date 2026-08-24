@@ -6,24 +6,24 @@ import pytest
 
 from custom_components.eufy_p3_ble.models import PacketStatus
 from custom_components.eufy_p3_ble.parser import is_sequence_newer, parse_frame
-from tests.fixtures.t9150_packets import FINAL_82_75, LIVE_82_71, make_packet
+from tests.fixtures.t9150_packets import FINAL_SAMPLE, LIVE_SAMPLE, make_packet
 
 
 def test_parse_live_weight() -> None:
-    frame = parse_frame(LIVE_82_71)
+    frame = parse_frame(LIVE_SAMPLE)
     assert frame is not None
     assert frame.sequence == 0x57
     assert frame.status is PacketStatus.LIVE
-    assert frame.weight_kg == 82.71
+    assert frame.weight_kg == 72.31
     assert frame.heart_rate_bpm is None
     assert frame.impedance_ohm is None
 
 
 def test_parse_locked_weight() -> None:
-    frame = parse_frame(FINAL_82_75)
+    frame = parse_frame(FINAL_SAMPLE)
     assert frame is not None
     assert frame.status is PacketStatus.LOCKED
-    assert frame.weight_kg == 82.75
+    assert frame.weight_kg == 72.35
     assert frame.is_final
 
 
@@ -36,9 +36,9 @@ def test_parse_all_post_final_statuses(status: int) -> None:
 
 
 def test_parse_impedance() -> None:
-    frame = parse_frame(make_packet(sequence=2, status=0x25, impedance_ohm=435.0))
+    frame = parse_frame(make_packet(sequence=2, status=0x25, impedance_ohm=510.0))
     assert frame is not None
-    assert frame.impedance_ohm == 435.0
+    assert frame.impedance_ohm == 510.0
 
 
 def test_parse_heart_rate() -> None:
