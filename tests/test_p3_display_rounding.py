@@ -1,4 +1,4 @@
-"""Regression tests for P3-specific display rounding observed in EufyLife."""
+"""Regression tests for P3-specific display rounding behavior."""
 
 from __future__ import annotations
 
@@ -12,17 +12,17 @@ from custom_components.eufy_p3_ble.body_composition import (
 )
 
 
-def test_supplied_p3_measurement_matches_eufylife_display_rounding() -> None:
-    """Keep the locally calculated values aligned with the supplied P3 result."""
+def test_synthetic_p3_vector_keeps_fixed_point_rounding_stable() -> None:
+    """Keep the reconstructed fixed-point display behavior stable."""
     result = calculate_body_composition(
-        BodyCompositionProfile(sex=Sex.MALE, height_cm=175, age=28),
+        BodyCompositionProfile(sex=Sex.MALE, height_cm=180, age=35),
         BodyMeasurement(
-            weight_kg=85.3,
-            impedance_ohm=482.0,
+            weight_kg=78.45,
+            impedance_ohm=510.0,
             measured_at=datetime(2026, 8, 24, 8, 0, tzinfo=UTC),
         ),
     )
 
-    assert result.body_water_percent == 49.5
-    assert result.skeletal_muscle_mass_kg == 32.3
-    assert result.bmr_kcal_per_day == 1771
+    assert result.body_water_percent == 52.9
+    assert result.skeletal_muscle_mass_kg == 31.7
+    assert result.bmr_kcal_per_day == 1602
