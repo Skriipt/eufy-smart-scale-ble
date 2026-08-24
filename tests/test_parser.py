@@ -36,9 +36,7 @@ def test_parse_all_post_final_statuses(status: int) -> None:
 
 
 def test_parse_impedance() -> None:
-    frame = parse_frame(
-        make_packet(sequence=2, status=0x25, impedance_ohm=435.0)
-    )
+    frame = parse_frame(make_packet(sequence=2, status=0x25, impedance_ohm=435.0))
     assert frame is not None
     assert frame.impedance_ohm == 435.0
 
@@ -51,18 +49,14 @@ def test_parse_heart_rate() -> None:
 
 @pytest.mark.parametrize("heart_rate", [0, 29, 241, 255])
 def test_ignore_implausible_heart_rate(heart_rate: int) -> None:
-    frame = parse_frame(
-        make_packet(sequence=3, status=0xE5, heart_rate=heart_rate)
-    )
+    frame = parse_frame(make_packet(sequence=3, status=0xE5, heart_rate=heart_rate))
     assert frame is not None
     assert frame.heart_rate_bpm is None
 
 
 @pytest.mark.parametrize("impedance", [0.0, 49.9, 2000.1, 4000.0])
 def test_ignore_implausible_impedance(impedance: float) -> None:
-    frame = parse_frame(
-        make_packet(sequence=3, status=0x25, impedance_ohm=impedance)
-    )
+    frame = parse_frame(make_packet(sequence=3, status=0x25, impedance_ohm=impedance))
     assert frame is not None
     assert frame.impedance_ohm is None
 
