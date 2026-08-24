@@ -26,18 +26,18 @@ from custom_components.eufy_p3_ble.const import (
 )
 from custom_components.eufy_p3_ble.models import PacketStatus
 from tests.common import MockConfigEntry
-from tests.fixtures.t9150_packets import FINAL_82_75, LIVE_82_71, make_packet
+from tests.fixtures.t9150_packets import FINAL_SAMPLE, LIVE_SAMPLE, make_packet
 
 ADDRESS = "11:22:33:44:55:66"
 PROFILE_OPTIONS = {
     CONF_SEX: "male",
-    CONF_HEIGHT_CM: 175,
-    CONF_AGE: 28,
+    CONF_HEIGHT_CM: 180,
+    CONF_AGE: 35,
     CONF_PROFILE_MODE: "normal",
 }
 RESTORED_MEASUREMENT = BodyMeasurement(
-    weight_kg=84.2,
-    impedance_ohm=480.0,
+    weight_kg=71.8,
+    impedance_ohm=505.0,
     measured_at=datetime(2026, 8, 23, 8, 0, tzinfo=UTC),
 )
 
@@ -131,12 +131,12 @@ async def test_registered_callback_uses_newest_manufacturer_entry(
         assert await async_setup_entry(hass, entry)
 
     callbacks[0](
-        service_info({53075: LIVE_82_71, 53085: FINAL_82_75}),
+        service_info({53075: LIVE_SAMPLE, 53085: FINAL_SAMPLE}),
         bluetooth.BluetoothChange.ADVERTISEMENT,
     )
     state = entry.runtime_data.device.state
     assert state.packet_status is PacketStatus.LOCKED
-    assert state.weight_kg == 82.75
+    assert state.weight_kg == 72.35
 
 
 async def test_complete_measurement_is_persisted(hass: HomeAssistant) -> None:
@@ -165,15 +165,15 @@ async def test_complete_measurement_is_persisted(hass: HomeAssistant) -> None:
     ):
         assert await async_setup_entry(hass, entry)
         entry.runtime_data.device.process(
-            {1: make_packet(sequence=1, status=0x05, weight_kg=85.3)}
+            {1: make_packet(sequence=1, status=0x05, weight_kg=78.45)}
         )
         entry.runtime_data.device.process(
             {
                 1: make_packet(
                     sequence=2,
                     status=0x25,
-                    weight_kg=85.3,
-                    impedance_ohm=482.0,
+                    weight_kg=78.45,
+                    impedance_ohm=510.0,
                 )
             }
         )
@@ -181,8 +181,8 @@ async def test_complete_measurement_is_persisted(hass: HomeAssistant) -> None:
 
     save.assert_awaited_once()
     saved = save.await_args.args[2]
-    assert saved.weight_kg == 85.3
-    assert saved.impedance_ohm == 482.0
+    assert saved.weight_kg == 78.45
+    assert saved.impedance_ohm == 510.0
 
 
 async def test_cached_service_info_is_processed_during_setup(
@@ -200,7 +200,7 @@ async def test_cached_service_info_is_processed_during_setup(
         patch.object(
             bluetooth,
             "async_last_service_info",
-            return_value=service_info({53085: FINAL_82_75}),
+            return_value=service_info({53085: FINAL_SAMPLE}),
         ),
         patch.object(bluetooth, "async_register_callback", return_value=lambda: None),
         patch.object(
@@ -208,7 +208,7 @@ async def test_cached_service_info_is_processed_during_setup(
         ),
     ):
         assert await async_setup_entry(hass, entry)
-    assert entry.runtime_data.device.state.weight_kg == 82.75
+    assert entry.runtime_data.device.state.weight_kg == 72.35
 
 
 async def test_options_update_reloads_entry(hass: HomeAssistant) -> None:
