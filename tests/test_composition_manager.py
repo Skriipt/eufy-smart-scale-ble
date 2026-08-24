@@ -35,6 +35,7 @@ def test_measurement_is_retained_until_profile_is_configured() -> None:
     assert manager.result is None
 
     assert manager.update_profile(PROFILE)
+    assert not manager.update_profile(PROFILE)
     assert manager.result is not None
     assert manager.result.body_type.value == "obese"
 

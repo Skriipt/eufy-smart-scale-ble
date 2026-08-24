@@ -185,3 +185,218 @@ def test_profile_from_mapping_rejects_invalid_options(
     from custom_components.eufy_p3_ble.body_composition import profile_from_mapping
 
     assert profile_from_mapping(options) is None
+
+
+def test_rejects_timezone_naive_measurement() -> None:
+    with pytest.raises(ValueError, match="measured_at must be timezone-aware"):
+        calculate_body_composition(
+            BodyCompositionProfile(sex=Sex.MALE, height_cm=175, age=28),
+            BodyMeasurement(
+                weight_kg=85.3,
+                impedance_ohm=482.0,
+                measured_at=datetime(2026, 8, 24, 8, 0),
+            ),
+        )
+
+
+def test_fixed_point_and_band_helpers_cover_all_boundaries() -> None:
+    from custom_components.eufy_p3_ble import body_composition as composition
+
+    assert composition._deci_kg_to_rate(10, 0) == 0
+    assert [composition._age_band_index(age) for age in (6, 18, 19, 39, 40, 59, 60, 99)] == [
+        0,
+        12,
+        12,
+        12,
+        13,
+        13,
+        14,
+        14,
+    ]
+    assert composition._muscle_bands(150, True) == (385, 465)
+    assert composition._muscle_bands(150, False) == (291, 347)
+    assert composition._muscle_bands(165, True) == (440, 524)
+    assert composition._muscle_bands(165, False) == (329, 375)
+    assert composition._muscle_bands(175, True) == (495, 594)
+    assert composition._muscle_bands(175, False) == (365, 425)
+
+
+@pytest.mark.parametrize(
+    ("fat_rate", "muscle_mass", "expected"),
+    [
+        (100, 400, BodyType.THIN),
+        (100, 550, BodyType.THIN_AND_MUSCULAR),
+        (100, 650, BodyType.VERY_MUSCULAR),
+        (300, 400, BodyType.HIDDEN_OBESE),
+        (300, 550, BodyType.OBESE),
+        (300, 650, BodyType.MUSCULAR_OVERWEIGHT),
+        (200, 400, BodyType.UNDER_EXERCISED),
+        (200, 550, BodyType.AVERAGE),
+        (200, 650, BodyType.STANDARD_MUSCULAR),
+    ],
+)
+def test_body_type_classifier_covers_all_nine_states(
+    fat_rate: int,
+    muscle_mass: int,
+    expected: BodyType,
+) -> None:
+    from custom_components.eufy_p3_ble import body_composition as composition
+
+    assert (
+        composition._classify_body_type(
+            fat_rate_permille=fat_rate,
+            muscle_deci_kg=muscle_mass,
+            age=28,
+            height_cm=175,
+            is_male=True,
+        )
+        is expected
+    )
+
+
+@pytest.mark.parametrize(
+    ("profile", "measurement", "expected"),
+    [
+        (
+            BodyCompositionProfile(sex=Sex.MALE, height_cm=90, age=6),
+            BodyMeasurement(10.0, 200.0, MEASURED_AT),
+            {
+                "body_fat_percent": 5.0,
+                "body_age_years": 6,
+                "visceral_fat_level": 1,
+                "body_type": BodyType.THIN,
+            },
+        ),
+        (
+            BodyCompositionProfile(sex=Sex.FEMALE, height_cm=90, age=99),
+            BodyMeasurement(10.0, 1200.0, MEASURED_AT),
+            {
+                "body_fat_percent": 75.0,
+                "body_water_percent": 35.0,
+                "bmr_kcal_per_day": 500,
+                "subcutaneous_fat_percent": 60.0,
+            },
+        ),
+        (
+            BodyCompositionProfile(sex=Sex.FEMALE, height_cm=165, age=29),
+            BodyMeasurement(70.0, 500.0, MEASURED_AT),
+            {
+                "body_fat_percent": 36.3,
+                "visceral_fat_level": 6,
+                "body_type": BodyType.STANDARD_MUSCULAR,
+            },
+        ),
+        (
+            BodyCompositionProfile(sex=Sex.MALE, height_cm=190, age=25),
+            BodyMeasurement(60.0, 500.0, MEASURED_AT),
+            {
+                "body_fat_percent": 5.0,
+                "visceral_fat_level": 1,
+                "body_type": BodyType.THIN_AND_MUSCULAR,
+            },
+        ),
+    ],
+)
+def test_normal_mode_extreme_vectors_cover_adjustments_and_clamps(
+    profile: BodyCompositionProfile,
+    measurement: BodyMeasurement,
+    expected: dict[str, float | int | BodyType],
+) -> None:
+    result = calculate_body_composition(profile, measurement)
+
+    for field, value in expected.items():
+        assert getattr(result, field) == value
+
+
+@pytest.mark.parametrize(
+    ("profile", "measurement", "expected_visceral", "expected_bone"),
+    [
+        (
+            BodyCompositionProfile(
+                sex=Sex.MALE,
+                height_cm=90,
+                age=6,
+                mode=ProfileMode.ATHLETE,
+            ),
+            BodyMeasurement(10.0, 200.0, MEASURED_AT),
+            1,
+            0.9,
+        ),
+        (
+            BodyCompositionProfile(
+                sex=Sex.MALE,
+                height_cm=90,
+                age=6,
+                mode=ProfileMode.ATHLETE,
+            ),
+            BodyMeasurement(20.0, 500.0, MEASURED_AT),
+            4,
+            0.9,
+        ),
+        (
+            BodyCompositionProfile(
+                sex=Sex.MALE,
+                height_cm=90,
+                age=6,
+                mode=ProfileMode.ATHLETE,
+            ),
+            BodyMeasurement(30.0, 500.0, MEASURED_AT),
+            9,
+            1.1,
+        ),
+        (
+            BodyCompositionProfile(
+                sex=Sex.MALE,
+                height_cm=90,
+                age=6,
+                mode=ProfileMode.ATHLETE,
+            ),
+            BodyMeasurement(50.0, 500.0, MEASURED_AT),
+            17,
+            1.4,
+        ),
+        (
+            BodyCompositionProfile(
+                sex=Sex.MALE,
+                height_cm=90,
+                age=6,
+                mode=ProfileMode.ATHLETE,
+            ),
+            BodyMeasurement(85.0, 200.0, MEASURED_AT),
+            30,
+            2.2,
+        ),
+        (
+            BodyCompositionProfile(
+                sex=Sex.MALE,
+                height_cm=90,
+                age=6,
+                mode=ProfileMode.ATHLETE,
+            ),
+            BodyMeasurement(135.0, 200.0, MEASURED_AT),
+            49,
+            3.3,
+        ),
+        (
+            BodyCompositionProfile(
+                sex=Sex.FEMALE,
+                height_cm=165,
+                age=29,
+                mode=ProfileMode.ATHLETE,
+            ),
+            BodyMeasurement(60.0, 500.0, MEASURED_AT),
+            2,
+            2.6,
+        ),
+    ],
+)
+def test_athlete_vectors_cover_visceral_bone_and_sex_adjustments(
+    profile: BodyCompositionProfile,
+    measurement: BodyMeasurement,
+    expected_visceral: int,
+    expected_bone: float,
+) -> None:
+    result = calculate_body_composition(profile, measurement)
+
+    assert result.visceral_fat_level == expected_visceral
+    assert result.bone_mass_kg == expected_bone

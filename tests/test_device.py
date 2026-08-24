@@ -177,6 +177,7 @@ def test_callback_registration_and_unregistration() -> None:
     device.process({1: LIVE_82_71})
     assert len(states) == 1
     unsubscribe()
+    unsubscribe()
     device.process({1: FINAL_82_75})
     assert len(states) == 1
 
