@@ -39,6 +39,26 @@ jobs:
           python -m json.tool custom_components/eufy_p3_ble/translations/en.json >/dev/null
           python -m json.tool custom_components/eufy_p3_ble/translations/de.json >/dev/null
 
+      - name: Validate release metadata
+        run: |
+          python - <<'PY'
+          import json
+          import tomllib
+          from pathlib import Path
+
+          manifest_version = json.loads(
+              Path("custom_components/eufy_p3_ble/manifest.json").read_text()
+          )["version"]
+          project_version = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]
+          if manifest_version != project_version:
+              raise SystemExit(
+                  f"Version mismatch: manifest={manifest_version}, project={project_version}"
+              )
+          changelog = Path("CHANGELOG.md").read_text()
+          if f"## [{manifest_version}]" not in changelog:
+              raise SystemExit(f"CHANGELOG.md has no section for {manifest_version}")
+          PY
+
       - name: Compile Python sources
         run: python -m compileall -q custom_components tests
 
