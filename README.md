@@ -130,6 +130,8 @@ You can also select **Add integration**, search for **Eufy Smart Scale P3 BLE**,
 
 The last complete raw measurement is stored locally in Home Assistant. Changing the profile reloads the integration and immediately recalculates that measurement; another weigh-in is not required.
 
+Calculated entities remain unavailable until both a valid profile and a complete weight-plus-impedance measurement are present.
+
 The current release supports **one calculation profile per configured scale**. If several people use the same scale, the raw entities remain correct, but the calculated entities always use the one profile configured for this integration entry.
 
 ## Measurement behavior
