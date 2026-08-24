@@ -203,7 +203,9 @@ def test_fixed_point_and_band_helpers_cover_all_boundaries() -> None:
     from custom_components.eufy_p3_ble import body_composition as composition
 
     assert composition._deci_kg_to_rate(10, 0) == 0
-    assert [composition._age_band_index(age) for age in (6, 18, 19, 39, 40, 59, 60, 99)] == [
+    assert [
+        composition._age_band_index(age) for age in (6, 18, 19, 39, 40, 59, 60, 99)
+    ] == [
         0,
         12,
         12,
