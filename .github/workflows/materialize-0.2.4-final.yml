@@ -1,0 +1,76 @@
+name: Materialize 0.2.4 parity release
+
+on:
+  push:
+    branches: [release/0.2.4-eufy-parity]
+    paths:
+      - .github/workflows/materialize-0.2.4-final.yml
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out release branch
+        uses: actions/checkout@v4
+        with:
+          ref: release/0.2.4-eufy-parity
+          fetch-depth: 0
+
+      - name: Apply final 0.2.4 changes
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          body = Path("custom_components/eufy_p3_ble/body_composition.py")
+          text = body.read_text()
+
+          old_id = 'ALGORITHM_ID: Final = "eufy_p3_compatible_v2"'
+          new_id = 'ALGORITHM_ID: Final = "eufy_p3_compatible_v3"'
+          if text.count(old_id) != 1:
+              raise SystemExit("Expected algorithm id exactly once")
+          text = text.replace(old_id, new_id)
+
+          old_protein = '''    protein_deci_kg = _round_half_up_positive(water_deci_kg * 0.3133)\n    protein_rate_permille = _deci_kg_to_rate(\n        _trunc(protein_deci_kg - 1.36), weight_deci_kg\n    )\n    protein_rate_permille = max(20, min(300, protein_rate_permille))\n'''
+          new_protein = '''    protein_deci_kg = _round_half_up_positive(water_deci_kg * 0.3133)\n    protein_mass_deci_kg = _trunc(protein_deci_kg - 1.36)\n    protein_rate_permille = _round_half_up_positive(\n        protein_mass_deci_kg * 1000 / weight_deci_kg\n    )\n    protein_rate_permille = max(20, min(300, protein_rate_permille))\n'''
+          if text.count(old_protein) != 1:
+              raise SystemExit("Expected protein block exactly once")
+          body.write_text(text.replace(old_protein, new_protein))
+
+          sensor_tests = Path("tests/test_sensor.py")
+          sensor_text = sensor_tests.read_text()
+          old_sensor = '    assert by_key["lean_body_mass"].native_value == 60.6\n'
+          new_sensor = '    assert by_key["lean_body_mass"].native_value == 60.7\n'
+          if sensor_text.count(old_sensor) != 1:
+              raise SystemExit("Expected sensor lean assertion exactly once")
+          sensor_tests.write_text(sensor_text.replace(old_sensor, new_sensor))
+
+          pyproject = Path("pyproject.toml")
+          project_text = pyproject.read_text()
+          old_project_version = 'version = "0.2.3"'
+          new_project_version = 'version = "0.2.4"'
+          if project_text.count(old_project_version) != 1:
+              raise SystemExit("Expected project version exactly once")
+          pyproject.write_text(project_text.replace(old_project_version, new_project_version))
+
+          changelog = Path("CHANGELOG.md")
+          changelog_text = changelog.read_text()
+          needle = "## [0.2.3] - 2026-08-24"
+          if changelog_text.count(needle) != 1:
+              raise SystemExit("Expected 0.2.3 changelog heading exactly once")
+          section = '''## [0.2.4] - 2026-08-24\n\n### Fixed\n\n- Aligned Lean Body Mass display rounding with EufyLife by using the scale's full two-decimal weight for the displayed subtraction while preserving the 0.1 kg fixed-point path used by dependent calculations such as Muscle Mass.\n- Rounded the final Protein percentage to the nearest 0.1% for EufyLife display parity.\n\n### Added\n\n- Added a real Eufy Smart Scale P3/EufyLife regression vector for 85.75 kg and 452.4 ohm that verifies all 14 calculated body-composition outputs, including Muscle Mass at 59.0 kg.\n\n### Changed\n\n- Bumped the local calculation identifier to `eufy_p3_compatible_v3`.\n\n'''
+          changelog.write_text(changelog_text.replace(needle, section + needle))
+          PY
+
+      - name: Commit materialized release changes and remove helper workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/materialize-0.2.4-final.yml
+          git add custom_components/eufy_p3_ble/body_composition.py tests/test_sensor.py pyproject.toml CHANGELOG.md
+          git commit -m "fix: match EufyLife body composition display rounding"
+          git push origin HEAD:release/0.2.4-eufy-parity
