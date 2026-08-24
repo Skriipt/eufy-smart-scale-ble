@@ -1,0 +1,208 @@
+name: Finalize calibration v0.2.1
+
+on:
+  push:
+    branches:
+      - fix/eufy-calibration-v0.2.1
+    paths:
+      - .github/workflows/finalize-calibration-v0.2.1.yml
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out calibration branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/eufy-calibration-v0.2.1
+          fetch-depth: 0
+
+      - name: Add regression vectors and release metadata
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          test_path = Path("tests/test_body_composition.py")
+          tests = test_path.read_text()
+          old = '''    assert result.body_water_percent == 49.6\n    assert result.visceral_fat_level == 11\n    assert result.skeletal_muscle_mass_kg == 32.4\n'''
+          new = '''    assert result.body_water_percent == 49.5\n    assert result.bmr_kcal_per_day == 1771\n    assert result.visceral_fat_level == 11\n    assert result.protein_percent == 15.2\n    assert result.skeletal_muscle_mass_kg == 32.3\n'''
+          if old not in tests:
+              raise SystemExit("First Eufy reference vector no longer matches expected source")
+          tests = tests.replace(old, new, 1)
+
+          marker = "def test_second_observed_eufy_measurement_matches_app() -> None:"
+          if marker not in tests:
+              insertion = '''\n\ndef test_second_observed_eufy_measurement_matches_app() -> None:\n    result = calculate_body_composition(\n        BodyCompositionProfile(sex=Sex.MALE, height_cm=175, age=28),\n        BodyMeasurement(\n            weight_kg=85.45,\n            impedance_ohm=454.5,\n            measured_at=MEASURED_AT,\n        ),\n    )\n\n    assert result.bmi == 27.8\n    assert result.body_fat_percent == 27.5\n    assert result.body_fat_mass_kg == 23.4\n    assert result.lean_body_mass_kg == 62.0\n    assert result.muscle_mass_kg == 58.9\n    assert result.bone_mass_kg == 3.1\n    assert result.body_water_percent == 49.6\n    assert result.bmr_kcal_per_day == 1773\n    assert result.visceral_fat_level == 11\n    assert result.protein_percent == 15.3\n    assert result.skeletal_muscle_mass_kg == 32.4\n    assert result.subcutaneous_fat_percent == 24.3\n    assert result.body_age_years == 30\n    assert result.body_type is BodyType.OBESE\n'''
+              anchor = "\n\n@pytest.mark.parametrize(\n    \"profile\","
+              if anchor not in tests:
+                  raise SystemExit("Could not find insertion point for second reference vector")
+              tests = tests.replace(anchor, insertion + anchor, 1)
+          test_path.write_text(tests)
+
+          manifest_path = Path("custom_components/eufy_p3_ble/manifest.json")
+          manifest = manifest_path.read_text().replace('"version": "0.2.0"', '"version": "0.2.1"')
+          if '"version": "0.2.1"' not in manifest:
+              raise SystemExit("Could not bump manifest version")
+          manifest_path.write_text(manifest)
+
+          pyproject_path = Path("pyproject.toml")
+          pyproject = pyproject_path.read_text().replace('version = "0.2.0"', 'version = "0.2.1"', 1)
+          if 'version = "0.2.1"' not in pyproject:
+              raise SystemExit("Could not bump project version")
+          pyproject_path.write_text(pyproject)
+
+          readme_path = Path("README.md")
+          readme = readme_path.read_text()
+          if "## Releases and versioning" not in readme:
+              section = '''\n## Releases and versioning\n\nThis repository uses semantic versions and **published GitHub Releases** for HACS. The integration version in `manifest.json`, the project version in `pyproject.toml`, the changelog entry, and the GitHub Release tag are kept in sync.\n\nAfter the test workflow succeeds on `main`, the release workflow publishes `v<version>` automatically if that release does not already exist. HACS therefore receives a stable release version instead of falling back to a commit hash.\n\nEvery user-visible change must be documented in [CHANGELOG.md](CHANGELOG.md) before its release.\n'''
+              readme = readme.replace("\n## Development\n", section + "\n## Development\n", 1)
+          readme_path.write_text(readme)
+          PY
+
+          cat > CHANGELOG.md <<'EOF'
+          # Changelog
+
+          All notable changes to this project are documented in this file.
+
+          The project follows semantic versioning. HACS versions are published as GitHub Releases using `v<version>` tags.
+
+          ## [0.2.1] - 2026-08-24
+
+          ### Changed
+
+          - Calibrated the local body-composition algorithm against a second real Eufy Smart Scale P3 measurement (`85.45 kg`, `454.5 Ω`).
+          - Changed the internal weight conversion to truncate to Eufy's 0.1 kg fixed-point input instead of rounding it.
+          - Truncated the water base value at the fixed-point boundary before applying Eufy's water coefficient, aligning body water and skeletal muscle mass with EufyLife.
+          - Preserved fractional BMR intermediates and truncate only the displayed final value, aligning the observed BMR output.
+          - Calibrated the protein estimate coefficient to `0.3133`, reproducing `15.2%` and `15.3%` for the two current real-world reference measurements.
+          - Bumped the calculation identifier to `eufy_p3_compatible_v2` so Home Assistant entity attributes show which calculation revision produced a value.
+
+          ### Added
+
+          - Added regression tests for both observed EufyLife reference measurements.
+          - Added this changelog and automated GitHub Release publishing after successful CI on `main`.
+          - Added CI validation to keep `manifest.json`, `pyproject.toml`, and the changelog version synchronized.
+
+          ## [0.2.0] - 2026-08-24
+
+          ### Added
+
+          - Added editable body-composition profile options for sex, height, age, and Normal/Athlete mode.
+          - Added same-session pairing of completed weight and impedance.
+          - Added 14 locally calculated body-composition entities: BMI, body fat, body fat mass, lean body mass, muscle mass, bone mass, body water, BMR, visceral fat, protein, skeletal muscle mass, subcutaneous fat, body age, and body type.
+          - Added local persistence of the latest complete weight/impedance measurement and recalculation after profile changes or Home Assistant restarts.
+          - Added English and German UI translations for the profile and calculated entities.
+
+          ### Changed
+
+          - Refined water, skeletal muscle, and BMR display rounding from the first observed P3 reference measurement.
+
+          ## [0.1.0] - 2026-08-24
+
+          ### Added
+
+          - Initial Home Assistant custom integration for the Eufy Smart Scale P3 (`T9150`).
+          - Local BLE advertisement parsing through Home Assistant Bluetooth adapters and ESPHome Bluetooth proxies.
+          - Reliable final-weight handling when stale and current manufacturer-data packets arrive together.
+          - Weight, real-time weight, impedance, heart rate, last measurement, and packet-status entities.
+          - HACS-compatible repository layout, automatic Bluetooth discovery, restoration, translations, tests, and CI.
+          EOF
+
+          cat > .github/workflows/release.yml <<'EOF'
+          name: Release
+
+          on:
+            workflow_run:
+              workflows: ["Tests"]
+              types: [completed]
+              branches: [main]
+
+          permissions:
+            contents: write
+
+          jobs:
+            release:
+              if: github.event.workflow_run.conclusion == 'success'
+              runs-on: ubuntu-latest
+              timeout-minutes: 10
+
+              steps:
+                - name: Check out tested main commit
+                  uses: actions/checkout@v4
+                  with:
+                    ref: ${{ github.event.workflow_run.head_sha }}
+                    fetch-depth: 0
+
+                - name: Resolve release version and notes
+                  id: version
+                  run: |
+                    VERSION=$(python - <<'PY'
+                    import json
+                    from pathlib import Path
+                    print(json.loads(Path("custom_components/eufy_p3_ble/manifest.json").read_text())["version"])
+                    PY
+                    )
+                    echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+                    echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+                    VERSION="$VERSION" python - <<'PY'
+                    import os
+                    import re
+                    from pathlib import Path
+
+                    version = os.environ["VERSION"]
+                    text = Path("CHANGELOG.md").read_text()
+                    pattern = rf"^## \[{re.escape(version)}\][^\n]*\n(?P<body>.*?)(?=^## \[|\Z)"
+                    match = re.search(pattern, text, flags=re.MULTILINE | re.DOTALL)
+                    if match is None:
+                        raise SystemExit(f"No CHANGELOG.md section found for {version}")
+                    Path("release-notes.md").write_text(match.group("body").strip() + "\n")
+                    PY
+
+                - name: Publish GitHub Release if needed
+                  env:
+                    GH_TOKEN: ${{ github.token }}
+                    TAG: ${{ steps.version.outputs.tag }}
+                    TARGET: ${{ github.event.workflow_run.head_sha }}
+                  run: |
+                    if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+                      echo "Release $TAG already exists; nothing to publish."
+                      exit 0
+                    fi
+                    gh release create "$TAG" \
+                      --repo "$GITHUB_REPOSITORY" \
+                      --target "$TARGET" \
+                      --title "$TAG" \
+                      --notes-file release-notes.md
+          EOF
+
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path(".github/workflows/tests.yml")
+          text = path.read_text()
+          marker = "      - name: Compile Python sources\n"
+          if "Validate release metadata" not in text:
+              block = '''      - name: Validate release metadata\n        run: |\n          python - <<'PY'\n          import json\n          import tomllib\n          from pathlib import Path\n\n          manifest_version = json.loads(\n              Path("custom_components/eufy_p3_ble/manifest.json").read_text()\n          )["version"]\n          project_version = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]\n          if manifest_version != project_version:\n              raise SystemExit(\n                  f"Version mismatch: manifest={manifest_version}, project={project_version}"\n              )\n          changelog = Path("CHANGELOG.md").read_text()\n          if f"## [{manifest_version}]" not in changelog:\n              raise SystemExit(f"CHANGELOG.md has no section for {manifest_version}")\n          PY\n\n'''
+              if marker not in text:
+                  raise SystemExit("Could not locate tests workflow insertion point")
+              text = text.replace(marker, block + marker, 1)
+          path.write_text(text)
+          PY
+
+          rm -f .github/workflows/apply-calibration-v0.2.1.yml
+          rm -f .github/workflows/finalize-calibration-v0.2.1.yml
+
+      - name: Commit release-ready calibration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "release: prepare v0.2.1 calibration"
+          git push origin HEAD:fix/eufy-calibration-v0.2.1
