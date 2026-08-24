@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 from custom_components.eufy_p3_ble.body_composition import BodyMeasurement
 from custom_components.eufy_p3_ble.device import EufyP3Device
 from custom_components.eufy_p3_ble.models import PacketStatus
+from tests.fixtures.builders import build_p3_packet
 from tests.fixtures.t9150_packets import (
     FINAL_SAMPLE,
     HEART_RATE_SAMPLE,
@@ -22,6 +23,73 @@ class Clock:
 
     def __call__(self) -> datetime:
         return self.value
+
+
+def test_full_p3_session_regression_uses_only_same_session_fields() -> None:
+    clock = Clock()
+    device = EufyP3Device(now=clock)
+    live = build_p3_packet(sequence=0xF8, status=0x01, weight_hundredths=6430)
+    locked = build_p3_packet(sequence=0xF9, status=0x05, weight_hundredths=6432)
+    impedance = build_p3_packet(
+        sequence=0xFA,
+        status=0x25,
+        weight_hundredths=6432,
+        impedance_tenths=5432,
+    )
+    complete = build_p3_packet(
+        sequence=0xFB,
+        status=0xE5,
+        weight_hundredths=6432,
+        impedance_tenths=5432,
+        heart_rate=88,
+    )
+
+    assert device.process({1: live})
+    assert device.state.real_time_weight_kg == 64.3
+    assert device.state.weight_kg is None
+
+    assert device.process({1: locked})
+    measurement_time = device.state.last_measurement_at
+    assert measurement_time == clock.value
+    assert device.state.body_measurement is None
+
+    clock.value += timedelta(seconds=15)
+    assert device.process({1: impedance})
+    assert device.state.body_measurement == BodyMeasurement(
+        64.32, 543.2, measurement_time
+    )
+
+    assert device.process({1: complete})
+    assert device.state.weight_kg == 64.32
+    assert device.state.impedance_ohm == 543.2
+    assert device.state.heart_rate_bpm == 88
+    assert device.state.last_measurement_at == measurement_time
+    assert device.state.packet_status is PacketStatus.COMPLETE
+
+    snapshot = device.state
+    assert not device.process({1: complete})
+    assert not device.process({1: locked})
+    assert device.state == snapshot
+
+
+def test_p3_device_accepts_sequence_wraparound() -> None:
+    device = EufyP3Device()
+    before_wrap = build_p3_packet(
+        sequence=0xFF,
+        status=0x01,
+        weight_hundredths=6500,
+    )
+    after_wrap = build_p3_packet(
+        sequence=0x00,
+        status=0x05,
+        weight_hundredths=6501,
+    )
+
+    assert device.process({1: before_wrap})
+    assert device.process({1: after_wrap})
+    assert device.state.sequence == 0
+    assert device.state.weight_kg == 65.01
+    assert device.state.packet_status is PacketStatus.LOCKED
 
 
 def test_live_weight_does_not_create_completed_measurement() -> None:

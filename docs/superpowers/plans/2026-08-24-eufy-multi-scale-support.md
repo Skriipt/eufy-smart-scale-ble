@@ -254,7 +254,9 @@ class MeasurementEvent:
 
 
 class AdvertisementParser(Protocol):
-    def parse(self, manufacturer_data: Mapping[int, object]) -> tuple[MeasurementEvent, ...]: ...
+    def parse(
+        self, manufacturer_data: Mapping[int, object]
+    ) -> tuple[MeasurementEvent, ...]: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -740,7 +742,14 @@ After normalizing from the embedded frame:
 Create builders using only chosen synthetic numbers, never copied real captures:
 
 ```python
-def build_p3_packet(*, sequence: int, status: int, weight_hundredths: int, impedance_tenths: int = 0, heart_rate: int | None = None) -> bytes:
+def build_p3_packet(
+    *,
+    sequence: int,
+    status: int,
+    weight_hundredths: int,
+    impedance_tenths: int = 0,
+    heart_rate: int | None = None,
+) -> bytes:
     data = bytearray(23)
     data[6] = sequence
     data[10] = status
@@ -847,8 +856,14 @@ git commit -m "refactor: generalize integration domain and naming"
 ```python
 def test_all_official_eufylife_models_are_registered():
     assert set(SUPPORTED_MODELS) == {
-        "eufy T9120", "eufy T9130", "eufy T9140", "eufy T9146",
-        "eufy T9147", "eufy T9148", "eufy T9149", "eufy T9150",
+        "eufy T9120",
+        "eufy T9130",
+        "eufy T9140",
+        "eufy T9146",
+        "eufy T9147",
+        "eufy T9148",
+        "eufy T9149",
+        "eufy T9150",
     }
 ```
 
@@ -861,6 +876,7 @@ Add tests for T9150 verified impedance and T9148 unsupported impedance.
 class CapabilityDefinition:
     level: SupportLevel
     enabled_by_default: bool
+
 
 @dataclass(frozen=True, slots=True)
 class ScaleModelDefinition:

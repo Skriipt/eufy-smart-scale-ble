@@ -21,7 +21,7 @@ from custom_components.eufy_p3_ble.device import EufyP3Device
 from custom_components.eufy_p3_ble.models import EufyP3RuntimeData, ScaleState
 from custom_components.eufy_p3_ble.sensor import async_setup_entry
 from tests.common import MockConfigEntry
-from tests.fixtures.t9150_packets import LIVE_SAMPLE, make_packet
+from tests.fixtures.builders import build_p3_packet
 
 ADDRESS = "11:22:33:44:55:66"
 PROFILE = BodyCompositionProfile(sex=Sex.MALE, height_cm=180, age=35)
@@ -113,17 +113,22 @@ async def test_entities_follow_complete_measurement() -> None:
         entity.async_write_ha_state = lambda: None
         entity._subscribe_for_test()
 
-    entry.runtime_data.device.process({1: LIVE_SAMPLE})
+    live = build_p3_packet(
+        sequence=0x57,
+        status=0x01,
+        weight_hundredths=7231,
+    )
+    entry.runtime_data.device.process({1: live})
     assert by_key["real_time_weight"].native_value == 72.31
     assert by_key["weight"].native_value is None
     assert by_key["bmi"].native_value is None
 
-    complete = make_packet(
+    complete = build_p3_packet(
         sequence=0x58,
         status=0xE5,
-        weight_kg=78.45,
+        weight_hundredths=7845,
         heart_rate=72,
-        impedance_ohm=510.0,
+        impedance_tenths=5100,
     )
     entry.runtime_data.device.process({1: complete})
 

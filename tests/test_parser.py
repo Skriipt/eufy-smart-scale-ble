@@ -6,7 +6,28 @@ import pytest
 
 from custom_components.eufy_p3_ble.models import PacketStatus
 from custom_components.eufy_p3_ble.parser import is_sequence_newer, parse_frame
+from tests.fixtures.builders import build_p3_packet
 from tests.fixtures.t9150_packets import FINAL_SAMPLE, LIVE_SAMPLE, make_packet
+
+
+def test_synthetic_builder_preserves_documented_p3_fields() -> None:
+    raw = build_p3_packet(
+        sequence=0x2A,
+        status=0x25,
+        weight_hundredths=6432,
+        impedance_tenths=5432,
+        heart_rate=88,
+    )
+
+    frame = parse_frame(raw)
+
+    assert frame is not None
+    assert len(raw) == 23
+    assert frame.sequence == 0x2A
+    assert frame.status is PacketStatus.IMPEDANCE
+    assert frame.weight_kg == 64.32
+    assert frame.impedance_ohm == 543.2
+    assert frame.heart_rate_bpm == 88
 
 
 def test_parse_live_weight() -> None:
