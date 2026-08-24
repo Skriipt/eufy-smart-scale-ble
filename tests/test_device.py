@@ -55,7 +55,9 @@ def test_full_p3_session_regression_uses_only_same_session_fields() -> None:
 
     clock.value += timedelta(seconds=15)
     assert device.process({1: impedance})
-    assert device.state.body_measurement == BodyMeasurement(64.32, 543.2, measurement_time)
+    assert device.state.body_measurement == BodyMeasurement(
+        64.32, 543.2, measurement_time
+    )
 
     assert device.process({1: complete})
     assert device.state.weight_kg == 64.32
