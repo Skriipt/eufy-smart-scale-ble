@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from contextlib import suppress
 from dataclasses import replace
 from datetime import UTC, datetime
 
@@ -42,10 +43,8 @@ class EufyP3Device:
             if removed:
                 return
             removed = True
-            try:
+            with suppress(ValueError):
                 self._callbacks.remove(callback)
-            except ValueError:
-                pass
 
         return unsubscribe
 
