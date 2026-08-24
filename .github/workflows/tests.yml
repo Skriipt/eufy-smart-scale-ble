@@ -2,11 +2,14 @@ name: Tests
 
 on:
   push:
-    branches: [main, "feat/**"]
   pull_request:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   quality:
@@ -35,7 +38,6 @@ jobs:
           python -m json.tool custom_components/eufy_p3_ble/strings.json >/dev/null
           python -m json.tool custom_components/eufy_p3_ble/translations/en.json >/dev/null
           python -m json.tool custom_components/eufy_p3_ble/translations/de.json >/dev/null
-          python -m json.tool custom_components/eufy_p3_ble/icons.json >/dev/null
 
       - name: Compile Python sources
         run: python -m compileall -q custom_components tests
