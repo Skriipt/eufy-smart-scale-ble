@@ -1,0 +1,31 @@
+name: Materialize implementation
+
+on:
+  push:
+    branches: [feat/eufy-p3-integration]
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Materialize repository files
+        run: |
+          base64 --decode .bootstrap/eufy-p3-implementation.tar.gz.b64 > /tmp/eufy-p3-implementation.tar.gz
+          tar -xzf /tmp/eufy-p3-implementation.tar.gz
+          rm -rf .bootstrap
+          rm -f .github/workflows/bootstrap.yml
+      - name: Commit implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: implement Eufy P3 Home Assistant integration"
+          git push
