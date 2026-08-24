@@ -14,7 +14,7 @@ from enum import StrEnum
 from math import trunc
 from typing import Final
 
-ALGORITHM_ID: Final = "eufy_p3_compatible_v1"
+ALGORITHM_ID: Final = "eufy_p3_compatible_v2"
 ALGORITHM_STATUS: Final = "experimental"
 
 MIN_HEIGHT_CM: Final = 90
@@ -266,7 +266,7 @@ def calculate_body_composition(
     is_athlete = profile.mode is ProfileMode.ATHLETE
     height_cm = profile.height_cm
     age = profile.age
-    weight_deci_kg = _round_half_up_positive(measurement.weight_kg * 10)
+    weight_deci_kg = _trunc(measurement.weight_kg * 10)
     impedance_ohm = measurement.impedance_ohm
     height_m_squared = (height_cm / 100) ** 2
 
@@ -314,7 +314,7 @@ def calculate_body_composition(
 
     muscle_deci_kg = lean_body_mass_deci_kg - bone_deci_kg
 
-    water_base_permille = (1000 - fat_rate_permille) * 7 / 10
+    water_base_permille = _trunc((1000 - fat_rate_permille) * 7 / 10)
     water_rate = water_base_permille * (
         1.02 if water_base_permille < 501 else 0.98
     )
@@ -325,7 +325,7 @@ def calculate_body_composition(
     water_deci_kg = _rate_to_deci_kg(weight_deci_kg, water_rate_permille)
     skeletal_muscle_deci_kg = _trunc(water_deci_kg * 0.832 - 27.354)
 
-    protein_deci_kg = _round_half_up_positive(water_deci_kg * 0.275)
+    protein_deci_kg = _round_half_up_positive(water_deci_kg * 0.3133)
     protein_rate_permille = _deci_kg_to_rate(
         _trunc(protein_deci_kg - 1.36), weight_deci_kg
     )
