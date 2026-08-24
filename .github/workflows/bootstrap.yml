@@ -3,6 +3,8 @@ name: Materialize implementation
 on:
   push:
     branches: [feat/eufy-p3-integration]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
@@ -16,6 +18,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: feat/eufy-p3-integration
       - name: Materialize repository files
         run: |
           base64 --decode .bootstrap/eufy-p3-implementation.tar.gz.b64 > /tmp/eufy-p3-implementation.tar.gz
@@ -28,6 +31,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -m "feat: implement Eufy P3 Home Assistant integration"
-          git push
-
-# Triggered after the workflow exists on the branch.
+          git push origin HEAD:feat/eufy-p3-integration
