@@ -5,8 +5,11 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
+from .body_composition import BodyMeasurement, profile_from_mapping
+from .composition_manager import BodyCompositionManager
 from .device import EufyP3Device
-from .models import EufyP3RuntimeData
+from .models import EufyP3RuntimeData, ScaleState
+from .storage import async_load_measurement, async_save_measurement
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -30,7 +33,40 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.error("Eufy P3 config entry has no Bluetooth address")
         return False
 
-    device = EufyP3Device(now=dt_util.utcnow)
+    restored_measurement: BodyMeasurement | None = None
+    try:
+        restored_measurement = await async_load_measurement(hass, entry.entry_id)
+    except Exception as err:  # Defensive boundary around persistent user data.
+        _LOGGER.warning("Unable to restore the latest Eufy P3 measurement: %s", err)
+
+    composition = BodyCompositionManager(
+        profile=profile_from_mapping(entry.options),
+        measurement=restored_measurement,
+    )
+    device = EufyP3Device(
+        now=dt_util.utcnow,
+        restored_measurement=restored_measurement,
+    )
+    entry.runtime_data = EufyP3RuntimeData(
+        address=address,
+        device=device,
+        composition=composition,
+    )
+
+    async def _async_persist(measurement: BodyMeasurement) -> None:
+        try:
+            await async_save_measurement(hass, entry.entry_id, measurement)
+        except Exception as err:  # Storage failure must not break BLE processing.
+            _LOGGER.warning("Unable to store the latest Eufy P3 measurement: %s", err)
+
+    def _async_update_composition(state: ScaleState) -> None:
+        measurement = state.body_measurement
+        if measurement is None or not composition.update_measurement(measurement):
+            return
+        hass.async_create_task(_async_persist(measurement))
+
+    entry.async_on_unload(device.register_callback(_async_update_composition))
+
     logged_errors: set[tuple[type[BaseException], str]] = set()
 
     def _async_update_ble(service_info: Any, _change: Any) -> None:
@@ -53,13 +89,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ha_bluetooth.BluetoothScanningMode.ACTIVE,
         )
     )
+    entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
 
     if service_info := ha_bluetooth.async_last_service_info(hass, address, False):
         _async_update_ble(service_info, None)
 
-    entry.runtime_data = EufyP3RuntimeData(address=address, device=device)
     await hass.config_entries.async_forward_entry_setups(entry, [Platform.SENSOR])
     return True
+
+
+async def _async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Reload the integration after profile options change."""
+    await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

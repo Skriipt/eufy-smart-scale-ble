@@ -10,10 +10,69 @@ from homeassistant.components.bluetooth import (
     BluetoothServiceInfoBleak,
     async_discovered_service_info,
 )
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_ADDRESS, CONF_MODEL
+from homeassistant.core import callback
+from homeassistant.helpers.selector import SelectSelector, SelectSelectorConfig
 
-from .const import DEVICE_NAME, DOMAIN, MODEL_ID
+from .body_composition import (
+    MAX_AGE,
+    MAX_HEIGHT_CM,
+    MIN_AGE,
+    MIN_HEIGHT_CM,
+    ProfileMode,
+    Sex,
+)
+from .const import (
+    CONF_AGE,
+    CONF_HEIGHT_CM,
+    CONF_PROFILE_MODE,
+    CONF_SEX,
+    DEFAULT_AGE,
+    DEFAULT_HEIGHT_CM,
+    DEFAULT_PROFILE_MODE,
+    DEFAULT_SEX,
+    DEVICE_NAME,
+    DOMAIN,
+    MODEL_ID,
+)
+
+SEX_SELECTOR = SelectSelector(
+    SelectSelectorConfig(
+        options=[value.value for value in Sex],
+        translation_key=CONF_SEX,
+    )
+)
+PROFILE_MODE_SELECTOR = SelectSelector(
+    SelectSelectorConfig(
+        options=[value.value for value in ProfileMode],
+        translation_key=CONF_PROFILE_MODE,
+    )
+)
+
+
+def _profile_schema(options: dict[str, Any]) -> vol.Schema:
+    """Build the editable body-composition profile schema."""
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_SEX,
+                default=options.get(CONF_SEX, DEFAULT_SEX),
+            ): SEX_SELECTOR,
+            vol.Required(
+                CONF_HEIGHT_CM,
+                default=options.get(CONF_HEIGHT_CM, DEFAULT_HEIGHT_CM),
+            ): vol.All(int, vol.Range(min=MIN_HEIGHT_CM, max=MAX_HEIGHT_CM)),
+            vol.Required(
+                CONF_AGE,
+                default=options.get(CONF_AGE, DEFAULT_AGE),
+            ): vol.All(int, vol.Range(min=MIN_AGE, max=MAX_AGE)),
+            vol.Required(
+                CONF_PROFILE_MODE,
+                default=options.get(CONF_PROFILE_MODE, DEFAULT_PROFILE_MODE),
+            ): PROFILE_MODE_SELECTOR,
+        }
+    )
 
 
 class EufyP3BLEConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -24,6 +83,13 @@ class EufyP3BLEConfigFlow(ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self._discovery_info: BluetoothServiceInfoBleak | None = None
         self._discovered_devices: dict[str, str] = {}
+
+    @staticmethod
+    @callback
+    @override
+    def async_get_options_flow(config_entry: Any) -> EufyP3OptionsFlow:
+        """Return the profile options flow."""
+        return EufyP3OptionsFlow()
 
     @override
     async def async_step_bluetooth(
@@ -92,4 +158,20 @@ class EufyP3BLEConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {vol.Required(CONF_ADDRESS): vol.In(self._discovered_devices)}
             ),
+        )
+
+
+class EufyP3OptionsFlow(OptionsFlow):
+    """Manage the local body-composition calculation profile."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Create or edit the body-composition profile."""
+        if user_input is not None:
+            return self.async_create_entry(data=user_input)
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=_profile_schema(dict(self.config_entry.options)),
         )

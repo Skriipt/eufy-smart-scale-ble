@@ -7,7 +7,10 @@ from datetime import datetime
 from enum import IntEnum
 from typing import TYPE_CHECKING
 
+from .body_composition import BodyMeasurement
+
 if TYPE_CHECKING:
+    from .composition_manager import BodyCompositionManager
     from .device import EufyP3Device
 
 
@@ -75,6 +78,7 @@ class ScaleState:
     packet_status: PacketStatus | None = None
     sequence: int | None = None
     raw_packet_hex: str | None = None
+    body_measurement: BodyMeasurement | None = None
 
 
 @dataclass(slots=True)
@@ -83,3 +87,4 @@ class EufyP3RuntimeData:
 
     address: str
     device: EufyP3Device
+    composition: BodyCompositionManager

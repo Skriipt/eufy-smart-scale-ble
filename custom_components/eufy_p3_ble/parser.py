@@ -22,11 +22,7 @@ def is_sequence_newer(candidate: int, reference: int) -> bool:
 
 
 def parse_frame(raw: object) -> ScaleFrame | None:
-    """Validate and decode one T9150 manufacturer-data payload.
-
-    Malformed or unsupported input is intentionally ignored. Bluetooth
-    advertisements are untrusted, lossy input and must never break the HA callback.
-    """
+    """Validate and decode one T9150 manufacturer-data payload."""
     if not isinstance(raw, (bytes, bytearray, memoryview)):
         return None
 
