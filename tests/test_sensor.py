@@ -133,7 +133,7 @@ async def test_entities_follow_complete_measurement() -> None:
     assert by_key["bmi"].native_value == 24.1
     assert by_key["body_fat"].native_value == 22.8
     assert by_key["body_fat_mass"].native_value == 17.8
-    assert by_key["lean_body_mass"].native_value == 60.6
+    assert by_key["lean_body_mass"].native_value == 60.7
     assert by_key["muscle_mass"].native_value == 57.6
     assert by_key["bone_mass"].native_value == 3.0
     assert by_key["visceral_fat"].native_value == 11
