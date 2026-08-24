@@ -4,6 +4,19 @@ All notable changes to this project are documented in this file.
 
 The project follows semantic versioning. HACS versions are published as GitHub Releases using `v<version>` tags.
 
+## [0.2.7] - 2026-08-24
+
+### Added
+
+- Added the public GitHub issue tracker to the Home Assistant integration manifest for HACS repository validation.
+- Added HACS validation with `hacs/action@main` for the `integration` category without ignored checks.
+- Added Home Assistant Hassfest validation with `home-assistant/actions/hassfest@master` without bypassing failures.
+
+### Changed
+
+- Prepared repository metadata and CI for a future official HACS listing while keeping the current Custom Repository installation flow until acceptance.
+- No runtime integration behavior or body-composition calculations changed from `0.2.6`.
+
 ## [0.2.6] - 2026-08-24
 
 ### Added
