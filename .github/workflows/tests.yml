@@ -48,12 +48,12 @@ jobs:
       - name: Lint
         run: ruff check .
 
-      - name: Type check pure protocol layer
+      - name: Type check pure calculation and protocol layers
         run: mypy
 
       - name: Run tests with branch coverage
         run: |
           pytest --cov=custom_components/eufy_p3_ble --cov-branch --cov-report=term-missing
           coverage report \
-            --include='*/parser.py,*/bluetooth.py,*/device.py' \
+            --include='*/body_composition.py,*/composition_manager.py,*/parser.py,*/bluetooth.py,*/device.py' \
             --fail-under=95

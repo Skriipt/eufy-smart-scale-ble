@@ -20,6 +20,40 @@
       }
     }
   },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Body-composition profile",
+        "description": "These personal inputs are stored locally in Home Assistant and are used with weight and impedance to estimate body composition. The results are not medical measurements.",
+        "data": {
+          "sex": "Sex used for calculation",
+          "height_cm": "Height (cm)",
+          "age": "Age",
+          "profile_mode": "Profile mode"
+        },
+        "data_description": {
+          "sex": "Select the calculation branch matching the profile configured in EufyLife.",
+          "height_cm": "Height from 90 to 220 centimetres.",
+          "age": "Age from 6 to 99 years.",
+          "profile_mode": "Use Athlete only when the EufyLife profile also uses Athlete Mode."
+        }
+      }
+    }
+  },
+  "selector": {
+    "sex": {
+      "options": {
+        "male": "Male",
+        "female": "Female"
+      }
+    },
+    "profile_mode": {
+      "options": {
+        "normal": "Normal",
+        "athlete": "Athlete"
+      }
+    }
+  },
   "entity": {
     "sensor": {
       "weight": {
@@ -47,6 +81,59 @@
           "body_composition": "Body composition",
           "body_composition_late": "Late body-composition phase",
           "complete": "Measurement complete"
+        }
+      },
+      "bmi": {
+        "name": "BMI"
+      },
+      "body_fat": {
+        "name": "Body fat"
+      },
+      "body_fat_mass": {
+        "name": "Body fat mass"
+      },
+      "lean_body_mass": {
+        "name": "Lean body mass"
+      },
+      "muscle_mass": {
+        "name": "Muscle mass"
+      },
+      "bone_mass": {
+        "name": "Bone mass"
+      },
+      "body_water": {
+        "name": "Body water"
+      },
+      "bmr": {
+        "name": "Basal metabolic rate"
+      },
+      "visceral_fat": {
+        "name": "Visceral fat"
+      },
+      "protein": {
+        "name": "Protein"
+      },
+      "skeletal_muscle_mass": {
+        "name": "Skeletal muscle mass"
+      },
+      "subcutaneous_fat": {
+        "name": "Subcutaneous fat"
+      },
+      "body_age": {
+        "name": "Body age"
+      },
+      "body_type": {
+        "name": "Body type",
+        "state": {
+          "hidden_obese": "Hidden-obese",
+          "under_exercised": "Under-exercised",
+          "thin": "Thin",
+          "obese": "Obese",
+          "average": "Average",
+          "thin_and_muscular": "Thin and muscular",
+          "muscular_overweight": "Muscular overweight",
+          "standard_muscular": "Standard muscular",
+          "very_muscular": "Very muscular"
         }
       }
     }

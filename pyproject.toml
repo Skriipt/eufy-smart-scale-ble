@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "eufy-smart-scale-ble"
-version = "0.1.0"
+version = "0.2.0"
 description = "Home Assistant custom integration for the Eufy Smart Scale P3 (T9150)"
 readme = "README.md"
 requires-python = ">=3.14.2"
@@ -56,8 +56,11 @@ strict = true
 warn_unreachable = true
 show_error_codes = true
 files = [
+  "custom_components/eufy_p3_ble/body_composition.py",
+  "custom_components/eufy_p3_ble/composition_manager.py",
   "custom_components/eufy_p3_ble/models.py",
   "custom_components/eufy_p3_ble/parser.py",
   "custom_components/eufy_p3_ble/bluetooth.py",
   "custom_components/eufy_p3_ble/device.py",
+  "custom_components/eufy_p3_ble/storage.py",
 ]

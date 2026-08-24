@@ -14,17 +14,24 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.const import EntityCategory, UnitOfMass
+from homeassistant.const import EntityCategory, UnitOfMass, UnitOfRatio
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
+from .body_composition import (
+    ALGORITHM_ID,
+    ALGORITHM_STATUS,
+    BodyCompositionResult,
+    BodyType,
+)
 from .const import DEVICE_NAME, DOMAIN, MANUFACTURER, MODEL_NAME
 from .models import EufyP3RuntimeData, ScaleState
 
 ValueType = float | int | str | datetime | None
 ValueGetter = Callable[[ScaleState], ValueType]
+CalculatedValueGetter = Callable[[BodyCompositionResult], float | int | str]
 
 STATUS_OPTIONS: Final = [
     "live",
@@ -35,6 +42,7 @@ STATUS_OPTIONS: Final = [
     "body_composition_late",
     "complete",
 ]
+BODY_TYPE_OPTIONS: Final = [value.value for value in BodyType]
 
 WEIGHT_DESCRIPTION = SensorEntityDescription(
     key="weight",
@@ -90,6 +98,162 @@ RESTORED_DESCRIPTIONS: Final[
     (LAST_MEASUREMENT_DESCRIPTION, lambda state: state.last_measurement_at),
 )
 
+CALCULATED_DESCRIPTIONS: Final[
+    tuple[tuple[SensorEntityDescription, CalculatedValueGetter], ...]
+] = (
+    (
+        SensorEntityDescription(
+            key="bmi",
+            translation_key="bmi",
+            state_class=SensorStateClass.MEASUREMENT,
+            icon="mdi:human-male-height-variant",
+            suggested_display_precision=1,
+        ),
+        lambda result: result.bmi,
+    ),
+    (
+        SensorEntityDescription(
+            key="body_fat",
+            translation_key="body_fat",
+            native_unit_of_measurement=UnitOfRatio.PERCENTAGE,
+            state_class=SensorStateClass.MEASUREMENT,
+            icon="mdi:percent",
+            suggested_display_precision=1,
+        ),
+        lambda result: result.body_fat_percent,
+    ),
+    (
+        SensorEntityDescription(
+            key="body_fat_mass",
+            translation_key="body_fat_mass",
+            device_class=SensorDeviceClass.WEIGHT,
+            native_unit_of_measurement=UnitOfMass.KILOGRAMS,
+            state_class=SensorStateClass.MEASUREMENT,
+            icon="mdi:weight-kilogram",
+            suggested_display_precision=1,
+        ),
+        lambda result: result.body_fat_mass_kg,
+    ),
+    (
+        SensorEntityDescription(
+            key="lean_body_mass",
+            translation_key="lean_body_mass",
+            device_class=SensorDeviceClass.WEIGHT,
+            native_unit_of_measurement=UnitOfMass.KILOGRAMS,
+            state_class=SensorStateClass.MEASUREMENT,
+            icon="mdi:weight-kilogram",
+            suggested_display_precision=1,
+        ),
+        lambda result: result.lean_body_mass_kg,
+    ),
+    (
+        SensorEntityDescription(
+            key="muscle_mass",
+            translation_key="muscle_mass",
+            device_class=SensorDeviceClass.WEIGHT,
+            native_unit_of_measurement=UnitOfMass.KILOGRAMS,
+            state_class=SensorStateClass.MEASUREMENT,
+            icon="mdi:arm-flex",
+            suggested_display_precision=1,
+        ),
+        lambda result: result.muscle_mass_kg,
+    ),
+    (
+        SensorEntityDescription(
+            key="bone_mass",
+            translation_key="bone_mass",
+            device_class=SensorDeviceClass.WEIGHT,
+            native_unit_of_measurement=UnitOfMass.KILOGRAMS,
+            state_class=SensorStateClass.MEASUREMENT,
+            icon="mdi:bone",
+            suggested_display_precision=1,
+        ),
+        lambda result: result.bone_mass_kg,
+    ),
+    (
+        SensorEntityDescription(
+            key="body_water",
+            translation_key="body_water",
+            native_unit_of_measurement=UnitOfRatio.PERCENTAGE,
+            state_class=SensorStateClass.MEASUREMENT,
+            icon="mdi:water-percent",
+            suggested_display_precision=1,
+        ),
+        lambda result: result.body_water_percent,
+    ),
+    (
+        SensorEntityDescription(
+            key="bmr",
+            translation_key="bmr",
+            native_unit_of_measurement="kcal/day",
+            state_class=SensorStateClass.MEASUREMENT,
+            icon="mdi:fire",
+        ),
+        lambda result: result.bmr_kcal_per_day,
+    ),
+    (
+        SensorEntityDescription(
+            key="visceral_fat",
+            translation_key="visceral_fat",
+            state_class=SensorStateClass.MEASUREMENT,
+            icon="mdi:counter",
+        ),
+        lambda result: result.visceral_fat_level,
+    ),
+    (
+        SensorEntityDescription(
+            key="protein",
+            translation_key="protein",
+            native_unit_of_measurement=UnitOfRatio.PERCENTAGE,
+            state_class=SensorStateClass.MEASUREMENT,
+            icon="mdi:food-steak",
+            suggested_display_precision=1,
+        ),
+        lambda result: result.protein_percent,
+    ),
+    (
+        SensorEntityDescription(
+            key="skeletal_muscle_mass",
+            translation_key="skeletal_muscle_mass",
+            device_class=SensorDeviceClass.WEIGHT,
+            native_unit_of_measurement=UnitOfMass.KILOGRAMS,
+            state_class=SensorStateClass.MEASUREMENT,
+            icon="mdi:arm-flex-outline",
+            suggested_display_precision=1,
+        ),
+        lambda result: result.skeletal_muscle_mass_kg,
+    ),
+    (
+        SensorEntityDescription(
+            key="subcutaneous_fat",
+            translation_key="subcutaneous_fat",
+            native_unit_of_measurement=UnitOfRatio.PERCENTAGE,
+            state_class=SensorStateClass.MEASUREMENT,
+            icon="mdi:percent-outline",
+            suggested_display_precision=1,
+        ),
+        lambda result: result.subcutaneous_fat_percent,
+    ),
+    (
+        SensorEntityDescription(
+            key="body_age",
+            translation_key="body_age",
+            state_class=SensorStateClass.MEASUREMENT,
+            icon="mdi:calendar-account",
+        ),
+        lambda result: result.body_age_years,
+    ),
+    (
+        SensorEntityDescription(
+            key="body_type",
+            translation_key="body_type",
+            device_class=SensorDeviceClass.ENUM,
+            icon="mdi:human",
+        ),
+        lambda result: result.body_type.value,
+    ),
+)
+
 
 def _normalized_address(address: str) -> str:
     return "".join(character for character in address.lower() if character.isalnum())
@@ -106,7 +270,7 @@ def _device_info(address: str) -> DeviceInfo:
 
 
 class _EufyP3EntityMixin:
-    """Shared callback and device metadata for all scale entities."""
+    """Shared callback and device metadata for raw scale entities."""
 
     _attr_has_entity_name = True
     _attr_should_poll = False
@@ -145,7 +309,7 @@ class _EufyP3EntityMixin:
 
 
 class EufyP3RestoredSensor(_EufyP3EntityMixin, RestoreSensor):
-    """A completed measurement that survives Home Assistant restarts."""
+    """A completed raw measurement that survives Home Assistant restarts."""
 
     def __init__(
         self,
@@ -238,12 +402,84 @@ class EufyP3PacketStatusSensor(_EufyP3EntityMixin, SensorEntity):
         return None
 
 
+class EufyP3CalculatedSensor(SensorEntity):
+    """One locally calculated body-composition estimate."""
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+
+    def __init__(
+        self,
+        data: EufyP3RuntimeData,
+        description: SensorEntityDescription,
+        value_getter: CalculatedValueGetter,
+    ) -> None:
+        self.entity_description = description
+        self._data = data
+        self._value_getter = value_getter
+        self._attr_unique_id = f"{_normalized_address(data.address)}_{description.key}"
+        self._attr_device_info = _device_info(data.address)
+        if description.device_class is SensorDeviceClass.ENUM:
+            self._attr_options = BODY_TYPE_OPTIONS
+
+    @property
+    @override
+    def available(self) -> bool:
+        return self._data.composition.result is not None
+
+    @property
+    @override
+    def native_value(self) -> float | int | str | None:
+        result = self._data.composition.result
+        return self._value_getter(result) if result is not None else None
+
+    @property
+    @override
+    def extra_state_attributes(self) -> dict[str, Any]:
+        manager = self._data.composition
+        profile = manager.profile
+        measurement = manager.measurement
+        return {
+            "source": "locally_calculated",
+            "algorithm": ALGORITHM_ID,
+            "algorithm_status": ALGORITHM_STATUS,
+            "input_weight_kg": (
+                measurement.weight_kg if measurement is not None else None
+            ),
+            "input_impedance_ohm": (
+                measurement.impedance_ohm if measurement is not None else None
+            ),
+            "measurement_timestamp": (
+                measurement.measured_at.isoformat() if measurement is not None else None
+            ),
+            "profile_sex": profile.sex.value if profile is not None else None,
+            "profile_height_cm": profile.height_cm if profile is not None else None,
+            "profile_age": profile.age if profile is not None else None,
+            "profile_mode": profile.mode.value if profile is not None else None,
+        }
+
+    @callback
+    def _handle_composition_update(self, _result: BodyCompositionResult | None) -> None:
+        self.async_write_ha_state()
+
+    def _subscribe_for_test(self) -> None:
+        """Subscribe without adding to HA; intentionally private test seam."""
+        self._data.composition.register_callback(self._handle_composition_update)
+
+    @override
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            self._data.composition.register_callback(self._handle_composition_update)
+        )
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: Any,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Create all Eufy P3 sensors."""
+    """Create raw and locally calculated P3 sensors."""
     data: EufyP3RuntimeData = entry.runtime_data
     entities: list[SensorEntity] = [
         EufyP3RestoredSensor(data, description, getter)
@@ -254,5 +490,9 @@ async def async_setup_entry(
             EufyP3RealTimeWeightSensor(data),
             EufyP3PacketStatusSensor(data),
         ]
+    )
+    entities.extend(
+        EufyP3CalculatedSensor(data, description, getter)
+        for description, getter in CALCULATED_DESCRIPTIONS
     )
     async_add_entities(entities)

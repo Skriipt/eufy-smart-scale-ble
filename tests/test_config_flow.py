@@ -1,4 +1,4 @@
-"""Tests for Eufy P3 BLE config flow."""
+"""Tests for Eufy P3 BLE config and profile options flows."""
 
 from __future__ import annotations
 
@@ -9,7 +9,14 @@ from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers.service_info.bluetooth import BluetoothServiceInfo
 
-from custom_components.eufy_p3_ble.const import DOMAIN, MODEL_ID
+from custom_components.eufy_p3_ble.const import (
+    CONF_AGE,
+    CONF_HEIGHT_CM,
+    CONF_PROFILE_MODE,
+    CONF_SEX,
+    DOMAIN,
+    MODEL_ID,
+)
 from tests.common import MockConfigEntry
 
 ADDRESS = "11:22:33:44:55:66"
@@ -31,6 +38,12 @@ NOT_SUPPORTED = BluetoothServiceInfo(
     service_uuids=[],
     source="local",
 )
+PROFILE_OPTIONS = {
+    CONF_SEX: "male",
+    CONF_HEIGHT_CM: 175,
+    CONF_AGE: 28,
+    CONF_PROFILE_MODE: "normal",
+}
 
 
 async def test_bluetooth_discovery(hass: HomeAssistant) -> None:
@@ -111,3 +124,38 @@ async def test_manual_flow_without_scale_aborts(hass: HomeAssistant) -> None:
         )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "no_devices_found"
+
+
+async def test_profile_options_flow(hass: HomeAssistant) -> None:
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id=ADDRESS,
+        data={"model": MODEL_ID},
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "init"
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input=PROFILE_OPTIONS
+    )
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert result["data"] == PROFILE_OPTIONS
+    assert entry.options == PROFILE_OPTIONS
+
+
+async def test_profile_options_flow_uses_saved_values(hass: HomeAssistant) -> None:
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id=ADDRESS,
+        data={"model": MODEL_ID},
+        options=PROFILE_OPTIONS,
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    values = result["data_schema"]({})
+
+    assert values == PROFILE_OPTIONS

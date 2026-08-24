@@ -78,13 +78,7 @@ def test_reject_implausible_weight(weight: float) -> None:
 
 @pytest.mark.parametrize(
     ("candidate", "reference", "expected"),
-    [
-        (1, 0, True),
-        (0, 255, True),
-        (255, 0, False),
-        (0, 0, False),
-        (128, 0, False),
-    ],
+    [(1, 0, True), (0, 255, True), (255, 0, False), (0, 0, False), (128, 0, False)],
 )
 def test_sequence_comparison(candidate: int, reference: int, expected: bool) -> None:
     assert is_sequence_newer(candidate, reference) is expected

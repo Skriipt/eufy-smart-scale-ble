@@ -1,4 +1,4 @@
-"""Stateful measurement session handling for the Eufy P3."""
+"""Stateful measurement-session handling for the Eufy P3."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from dataclasses import replace
 from datetime import UTC, datetime
 
 from .bluetooth import select_newest_frame
+from .body_composition import BodyMeasurement
 from .models import PacketStatus, ScaleFrame, ScaleState
 from .parser import is_sequence_newer
 
@@ -22,11 +23,28 @@ def _utcnow() -> datetime:
 class EufyP3Device:
     """Merge advertisement packets into stable Home Assistant values."""
 
-    def __init__(self, *, now: Clock = _utcnow) -> None:
+    def __init__(
+        self,
+        *,
+        now: Clock = _utcnow,
+        restored_measurement: BodyMeasurement | None = None,
+    ) -> None:
         self._now = now
-        self._state = ScaleState()
+        self._state = (
+            ScaleState(
+                weight_kg=restored_measurement.weight_kg,
+                impedance_ohm=restored_measurement.impedance_ohm,
+                last_measurement_at=restored_measurement.measured_at,
+                body_measurement=restored_measurement,
+            )
+            if restored_measurement is not None
+            else ScaleState()
+        )
         self._callbacks: list[StateCallback] = []
         self._session_finalized = False
+        self._session_weight_kg: float | None = None
+        self._session_impedance_ohm: float | None = None
+        self._session_measured_at: datetime | None = None
 
     @property
     def state(self) -> ScaleState:
@@ -57,7 +75,7 @@ class EufyP3Device:
         previous = self._state
         if frame.status is PacketStatus.LIVE:
             if previous.packet_status is not PacketStatus.LIVE:
-                self._session_finalized = False
+                self._begin_session()
             updated = replace(
                 previous,
                 real_time_weight_kg=frame.weight_kg,
@@ -66,10 +84,29 @@ class EufyP3Device:
                 raw_packet_hex=frame.raw.hex(),
             )
         else:
-            timestamp = previous.last_measurement_at
+            if self._starts_new_session_without_live(frame, previous):
+                self._begin_session()
+
             if not self._session_finalized:
-                timestamp = self._now()
+                self._session_measured_at = self._now()
                 self._session_finalized = True
+
+            self._session_weight_kg = frame.weight_kg
+            if frame.impedance_ohm is not None:
+                self._session_impedance_ohm = frame.impedance_ohm
+
+            body_measurement = previous.body_measurement
+            if (
+                self._session_weight_kg is not None
+                and self._session_impedance_ohm is not None
+                and self._session_measured_at is not None
+            ):
+                body_measurement = BodyMeasurement(
+                    weight_kg=self._session_weight_kg,
+                    impedance_ohm=self._session_impedance_ohm,
+                    measured_at=self._session_measured_at,
+                )
+
             updated = replace(
                 previous,
                 real_time_weight_kg=frame.weight_kg,
@@ -84,10 +121,11 @@ class EufyP3Device:
                     if frame.heart_rate_bpm is not None
                     else previous.heart_rate_bpm
                 ),
-                last_measurement_at=timestamp,
+                last_measurement_at=self._session_measured_at,
                 packet_status=frame.status,
                 sequence=frame.sequence,
                 raw_packet_hex=frame.raw.hex(),
+                body_measurement=body_measurement,
             )
 
         if updated == previous:
@@ -96,6 +134,24 @@ class EufyP3Device:
         for callback in tuple(self._callbacks):
             callback(updated)
         return True
+
+    def _begin_session(self) -> None:
+        """Clear only in-progress inputs, preserving the last complete result."""
+        self._session_finalized = False
+        self._session_weight_kg = None
+        self._session_impedance_ohm = None
+        self._session_measured_at = None
+
+    def _starts_new_session_without_live(
+        self, frame: ScaleFrame, previous: ScaleState
+    ) -> bool:
+        """Detect a new lock after a prior post-lock phase when live data was missed."""
+        return (
+            self._session_finalized
+            and frame.status is PacketStatus.LOCKED
+            and previous.packet_status is not None
+            and previous.packet_status.rank > PacketStatus.LOCKED.rank
+        )
 
     def _accept_frame(self, frame: ScaleFrame) -> bool:
         """Reject duplicate or out-of-order callbacks across advertisements."""
