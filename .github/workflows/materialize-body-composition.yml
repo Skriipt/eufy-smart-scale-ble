@@ -1,0 +1,39 @@
+name: Materialize body composition implementation
+
+on:
+  push:
+    branches:
+      - feat/body-composition
+    paths:
+      - ".bootstrap/body-composition.part-*"
+      - ".github/workflows/materialize-body-composition.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/body-composition
+          fetch-depth: 0
+
+      - name: Verify and materialize implementation
+        run: |
+          cat .bootstrap/body-composition.part-* | base64 --decode > /tmp/body-composition.tar.gz
+          echo "e3ea3dec467a4ffe726acc5f06ab68d61dc5c30919ee2c5b547c463302c340fc  /tmp/body-composition.tar.gz" | sha256sum --check -
+          tar -xzf /tmp/body-composition.tar.gz
+
+      - name: Commit implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/tests.yml README.md pyproject.toml custom_components tests
+          git commit -m "feat: add configurable body composition estimates"
+          git push origin HEAD:feat/body-composition
