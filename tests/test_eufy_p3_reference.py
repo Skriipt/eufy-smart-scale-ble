@@ -13,6 +13,7 @@ from custom_components.eufy_p3_ble.body_composition import (
 
 def test_real_p3_measurement_matches_eufylife_display() -> None:
     """Match the values displayed by EufyLife for a captured P3 measurement."""
+    # EufyLife effectively used calculation age 28 for this captured measurement.
     result = calculate_body_composition(
         BodyCompositionProfile(sex=Sex.MALE, height_cm=175, age=28),
         BodyMeasurement(
