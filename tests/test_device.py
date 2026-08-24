@@ -159,6 +159,29 @@ def test_locked_packet_after_complete_starts_new_session_when_live_was_missed() 
     assert device.state.body_measurement == BodyMeasurement(84.0, 460.0, clock.value)
 
 
+def test_post_lock_packet_starts_new_session_when_early_phases_were_missed() -> None:
+    clock = Clock()
+    device = EufyP3Device(now=clock)
+    device.process({1: HEART_RATE_82_75})
+    old_measurement = device.state.body_measurement
+
+    clock.value += timedelta(hours=1)
+    device.process(
+        {
+            1: make_packet(
+                sequence=0x70,
+                status=0x25,
+                weight_kg=84.0,
+                impedance_ohm=460.0,
+            )
+        }
+    )
+
+    assert device.state.body_measurement != old_measurement
+    assert device.state.body_measurement == BodyMeasurement(84.0, 460.0, clock.value)
+    assert device.state.last_measurement_at == clock.value
+
+
 def test_restored_measurement_seeds_completed_state() -> None:
     restored = BodyMeasurement(81.2, 440.0, datetime(2026, 8, 23, tzinfo=UTC))
     device = EufyP3Device(restored_measurement=restored)
