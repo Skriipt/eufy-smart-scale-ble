@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=78"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eufy-smart-scale-ble"
+version = "0.2.3"
+description = "Home Assistant custom integration for the Eufy Smart Scale P3 (T9150)"
+readme = "README.md"
+requires-python = ">=3.14.2"
+license = "MIT"
+authors = [{ name = "Skriipt" }]
+dependencies = []
+
+[project.optional-dependencies]
+test = [
+  "aiousbwatcher==1.1.2",
+  "mypy>=1.17,<2",
+  "pytest-cov>=7,<8",
+  "pytest-homeassistant-custom-component==0.13.357",
+  "ruff>=0.12,<1",
+  "serialx==1.8.2",
+]
+
+[tool.setuptools.packages.find]
+include = ["custom_components*"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers"
+asyncio_mode = "auto"
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["custom_components/eufy_p3_ble"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.ruff]
+target-version = "py314"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["ASYNC", "B", "E", "F", "I", "RUF", "SIM", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+warn_unreachable = true
+show_error_codes = true
+files = [
+  "custom_components/eufy_p3_ble/body_composition.py",
+  "custom_components/eufy_p3_ble/composition_manager.py",
+  "custom_components/eufy_p3_ble/models.py",
+  "custom_components/eufy_p3_ble/parser.py",
+  "custom_components/eufy_p3_ble/bluetooth.py",
+  "custom_components/eufy_p3_ble/device.py",
+  "custom_components/eufy_p3_ble/storage.py",
+]
