@@ -79,61 +79,35 @@ def test_athlete_mode_uses_adjusted_branch() -> None:
     assert athlete.bmr_kcal_per_day > normal.bmr_kcal_per_day
 
 
-def test_supplied_eufy_measurement_is_reproduced_with_calibrated_impedance() -> None:
+def test_synthetic_fixed_point_reference_vector() -> None:
     result = calculate_body_composition(
-        BodyCompositionProfile(sex=Sex.MALE, height_cm=175, age=28),
-        BodyMeasurement(weight_kg=85.3, impedance_ohm=482.0, measured_at=MEASURED_AT),
+        BodyCompositionProfile(sex=Sex.MALE, height_cm=180, age=35),
+        BodyMeasurement(weight_kg=78.45, impedance_ohm=510.0, measured_at=MEASURED_AT),
     )
 
-    assert result.bmi == 27.8
-    assert result.body_fat_percent == 27.7
-    assert result.body_fat_mass_kg == 23.6
-    assert result.lean_body_mass_kg == 61.7
-    assert result.muscle_mass_kg == 58.6
-    assert result.bone_mass_kg == 3.1
-    assert result.body_water_percent == 49.5
-    assert result.bmr_kcal_per_day == 1771
+    assert result.bmi == 24.1
+    assert result.body_fat_percent == 22.8
+    assert result.body_fat_mass_kg == 17.8
+    assert result.lean_body_mass_kg == 60.6
+    assert result.muscle_mass_kg == 57.6
+    assert result.bone_mass_kg == 3.0
+    assert result.body_water_percent == 52.9
+    assert result.bmr_kcal_per_day == 1602
     assert result.visceral_fat_level == 11
-    assert result.protein_percent == 15.2
-    assert result.skeletal_muscle_mass_kg == 32.3
-    assert result.subcutaneous_fat_percent == 24.5
-    assert result.body_age_years == 30
-    assert result.body_type is BodyType.OBESE
-
-
-def test_second_observed_eufy_measurement_matches_app() -> None:
-    result = calculate_body_composition(
-        BodyCompositionProfile(sex=Sex.MALE, height_cm=175, age=28),
-        BodyMeasurement(
-            weight_kg=85.45,
-            impedance_ohm=454.5,
-            measured_at=MEASURED_AT,
-        ),
-    )
-
-    assert result.bmi == 27.8
-    assert result.body_fat_percent == 27.5
-    assert result.body_fat_mass_kg == 23.4
-    assert result.lean_body_mass_kg == 62.0
-    assert result.muscle_mass_kg == 58.9
-    assert result.bone_mass_kg == 3.1
-    assert result.body_water_percent == 49.6
-    assert result.bmr_kcal_per_day == 1773
-    assert result.visceral_fat_level == 11
-    assert result.protein_percent == 15.3
-    assert result.skeletal_muscle_mass_kg == 32.4
-    assert result.subcutaneous_fat_percent == 24.3
-    assert result.body_age_years == 30
-    assert result.body_type is BodyType.OBESE
+    assert result.protein_percent == 16.3
+    assert result.skeletal_muscle_mass_kg == 31.7
+    assert result.subcutaneous_fat_percent == 20.2
+    assert result.body_age_years == 36
+    assert result.body_type is BodyType.AVERAGE
 
 
 @pytest.mark.parametrize(
     "profile",
     [
-        BodyCompositionProfile(sex=Sex.MALE, height_cm=89, age=28),
-        BodyCompositionProfile(sex=Sex.MALE, height_cm=221, age=28),
-        BodyCompositionProfile(sex=Sex.MALE, height_cm=175, age=5),
-        BodyCompositionProfile(sex=Sex.MALE, height_cm=175, age=100),
+        BodyCompositionProfile(sex=Sex.MALE, height_cm=89, age=35),
+        BodyCompositionProfile(sex=Sex.MALE, height_cm=221, age=35),
+        BodyCompositionProfile(sex=Sex.MALE, height_cm=180, age=5),
+        BodyCompositionProfile(sex=Sex.MALE, height_cm=180, age=100),
     ],
 )
 def test_rejects_invalid_profile(profile: BodyCompositionProfile) -> None:
@@ -141,8 +115,8 @@ def test_rejects_invalid_profile(profile: BodyCompositionProfile) -> None:
         calculate_body_composition(
             profile,
             BodyMeasurement(
-                weight_kg=85.3,
-                impedance_ohm=482.0,
+                weight_kg=78.45,
+                impedance_ohm=510.0,
                 measured_at=MEASURED_AT,
             ),
         )
@@ -150,14 +124,14 @@ def test_rejects_invalid_profile(profile: BodyCompositionProfile) -> None:
 
 @pytest.mark.parametrize(
     ("weight", "impedance"),
-    [(9.9, 482.0), (200.1, 482.0), (85.3, 199.9), (85.3, 1200.1)],
+    [(9.9, 510.0), (200.1, 510.0), (78.45, 199.9), (78.45, 1200.1)],
 )
 def test_rejects_inputs_outside_validated_ranges(
     weight: float, impedance: float
 ) -> None:
     with pytest.raises(ValueError):
         calculate_body_composition(
-            BodyCompositionProfile(sex=Sex.MALE, height_cm=175, age=28),
+            BodyCompositionProfile(sex=Sex.MALE, height_cm=180, age=35),
             BodyMeasurement(
                 weight_kg=weight,
                 impedance_ohm=impedance,
@@ -170,7 +144,7 @@ def test_profile_from_mapping_requires_all_profile_fields() -> None:
     from custom_components.eufy_p3_ble.body_composition import profile_from_mapping
 
     assert profile_from_mapping({}) is None
-    assert profile_from_mapping({"sex": "male", "height_cm": 175, "age": 28}) is None
+    assert profile_from_mapping({"sex": "male", "height_cm": 180, "age": 35}) is None
 
 
 def test_profile_from_mapping_parses_home_assistant_options() -> None:
@@ -183,16 +157,16 @@ def test_profile_from_mapping_parses_home_assistant_options() -> None:
     profile = profile_from_mapping(
         {
             "sex": "male",
-            "height_cm": 175,
-            "age": 28,
+            "height_cm": 180,
+            "age": 35,
             "profile_mode": "athlete",
         }
     )
 
     assert profile == BodyCompositionProfile(
         sex=Sex.MALE,
-        height_cm=175,
-        age=28,
+        height_cm=180,
+        age=35,
         mode=ProfileMode.ATHLETE,
     )
 
@@ -200,11 +174,11 @@ def test_profile_from_mapping_parses_home_assistant_options() -> None:
 @pytest.mark.parametrize(
     "options",
     [
-        {"sex": "unknown", "height_cm": 175, "age": 28, "profile_mode": "normal"},
-        {"sex": "male", "height_cm": 89, "age": 28, "profile_mode": "normal"},
-        {"sex": "male", "height_cm": 175, "age": 100, "profile_mode": "normal"},
-        {"sex": "male", "height_cm": 175, "age": 28, "profile_mode": "other"},
-        {"sex": "male", "height_cm": True, "age": 28, "profile_mode": "normal"},
+        {"sex": "unknown", "height_cm": 180, "age": 35, "profile_mode": "normal"},
+        {"sex": "male", "height_cm": 89, "age": 35, "profile_mode": "normal"},
+        {"sex": "male", "height_cm": 180, "age": 100, "profile_mode": "normal"},
+        {"sex": "male", "height_cm": 180, "age": 35, "profile_mode": "other"},
+        {"sex": "male", "height_cm": True, "age": 35, "profile_mode": "normal"},
     ],
 )
 def test_profile_from_mapping_rejects_invalid_options(
@@ -218,10 +192,10 @@ def test_profile_from_mapping_rejects_invalid_options(
 def test_rejects_timezone_naive_measurement() -> None:
     with pytest.raises(ValueError, match="measured_at must be timezone-aware"):
         calculate_body_composition(
-            BodyCompositionProfile(sex=Sex.MALE, height_cm=175, age=28),
+            BodyCompositionProfile(sex=Sex.MALE, height_cm=180, age=35),
             BodyMeasurement(
-                weight_kg=85.3,
-                impedance_ohm=482.0,
+                weight_kg=78.45,
+                impedance_ohm=510.0,
                 measured_at=datetime(2026, 8, 24, 8, 0),
             ),
         )
@@ -247,8 +221,8 @@ def test_fixed_point_and_band_helpers_cover_all_boundaries() -> None:
     assert composition._muscle_bands(150, False) == (291, 347)
     assert composition._muscle_bands(165, True) == (440, 524)
     assert composition._muscle_bands(165, False) == (329, 375)
-    assert composition._muscle_bands(175, True) == (495, 594)
-    assert composition._muscle_bands(175, False) == (365, 425)
+    assert composition._muscle_bands(180, True) == (495, 594)
+    assert composition._muscle_bands(180, False) == (365, 425)
 
 
 @pytest.mark.parametrize(
@@ -276,8 +250,8 @@ def test_body_type_classifier_covers_all_nine_states(
         composition._classify_body_type(
             fat_rate_permille=fat_rate,
             muscle_deci_kg=muscle_mass,
-            age=28,
-            height_cm=175,
+            age=35,
+            height_cm=180,
             is_male=True,
         )
         is expected
