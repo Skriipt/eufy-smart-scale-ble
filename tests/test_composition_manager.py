@@ -12,11 +12,11 @@ from custom_components.eufy_p3_ble.body_composition import (
 from custom_components.eufy_p3_ble.composition_manager import BodyCompositionManager
 
 MEASUREMENT = BodyMeasurement(
-    weight_kg=85.3,
-    impedance_ohm=482.0,
+    weight_kg=78.45,
+    impedance_ohm=510.0,
     measured_at=datetime(2026, 8, 24, 8, 30, tzinfo=UTC),
 )
-PROFILE = BodyCompositionProfile(sex=Sex.MALE, height_cm=175, age=28)
+PROFILE = BodyCompositionProfile(sex=Sex.MALE, height_cm=180, age=35)
 
 
 def test_initial_profile_and_measurement_are_calculated() -> None:
@@ -25,7 +25,7 @@ def test_initial_profile_and_measurement_are_calculated() -> None:
     assert manager.profile == PROFILE
     assert manager.measurement == MEASUREMENT
     assert manager.result is not None
-    assert manager.result.body_fat_percent == 27.7
+    assert manager.result.body_fat_percent == 22.8
 
 
 def test_measurement_is_retained_until_profile_is_configured() -> None:
@@ -37,7 +37,7 @@ def test_measurement_is_retained_until_profile_is_configured() -> None:
     assert manager.update_profile(PROFILE)
     assert not manager.update_profile(PROFILE)
     assert manager.result is not None
-    assert manager.result.body_type.value == "obese"
+    assert manager.result.body_type.value == "average"
 
 
 def test_new_measurement_notifies_once_and_duplicate_is_ignored() -> None:
@@ -55,7 +55,7 @@ def test_new_measurement_notifies_once_and_duplicate_is_ignored() -> None:
 
 def test_invalid_algorithm_input_remains_available_as_raw_measurement() -> None:
     invalid_for_algorithm = BodyMeasurement(
-        weight_kg=85.3,
+        weight_kg=78.45,
         impedance_ohm=150.0,
         measured_at=MEASUREMENT.measured_at,
     )
