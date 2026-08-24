@@ -1,0 +1,54 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "This scale is already configured.",
+      "already_in_progress": "Configuration for this scale is already in progress.",
+      "no_devices_found": "No Eufy Smart Scale P3 was found. Wake the scale and try again.",
+      "not_supported": "This Bluetooth device is not an Eufy Smart Scale P3 (T9150)."
+    },
+    "step": {
+      "bluetooth_confirm": {
+        "description": "Add {name} to Home Assistant?",
+        "title": "Eufy Smart Scale P3"
+      },
+      "user": {
+        "data": {
+          "address": "Scale"
+        },
+        "description": "Select the Eufy Smart Scale P3 you want to add.",
+        "title": "Add Eufy Smart Scale P3"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "weight": {
+        "name": "Weight"
+      },
+      "real_time_weight": {
+        "name": "Real-time weight"
+      },
+      "impedance": {
+        "name": "Impedance"
+      },
+      "heart_rate": {
+        "name": "Heart rate"
+      },
+      "last_measurement": {
+        "name": "Last measurement"
+      },
+      "packet_status": {
+        "name": "Packet status",
+        "state": {
+          "live": "Live measurement",
+          "locked": "Weight locked",
+          "post_lock": "Post-lock phase",
+          "impedance": "Impedance measurement",
+          "body_composition": "Body composition",
+          "body_composition_late": "Late body-composition phase",
+          "complete": "Measurement complete"
+        }
+      }
+    }
+  }
+}

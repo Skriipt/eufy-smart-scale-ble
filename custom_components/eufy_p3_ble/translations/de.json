@@ -1,0 +1,44 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "Diese Waage ist bereits eingerichtet.",
+      "already_in_progress": "Die Einrichtung dieser Waage läuft bereits.",
+      "no_devices_found": "Es wurde keine Eufy Smart Scale P3 gefunden. Wecke die Waage auf und versuche es erneut.",
+      "not_supported": "Dieses Bluetooth-Gerät ist keine Eufy Smart Scale P3 (T9150)."
+    },
+    "step": {
+      "bluetooth_confirm": {
+        "description": "{name} zu Home Assistant hinzufügen?",
+        "title": "Eufy Smart Scale P3"
+      },
+      "user": {
+        "data": {
+          "address": "Waage"
+        },
+        "description": "Wähle die Eufy Smart Scale P3 aus, die du hinzufügen möchtest.",
+        "title": "Eufy Smart Scale P3 hinzufügen"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "weight": {"name": "Gewicht"},
+      "real_time_weight": {"name": "Live-Gewicht"},
+      "impedance": {"name": "Impedanz"},
+      "heart_rate": {"name": "Herzfrequenz"},
+      "last_measurement": {"name": "Letzte Messung"},
+      "packet_status": {
+        "name": "Paketstatus",
+        "state": {
+          "live": "Live-Messung",
+          "locked": "Gewicht fixiert",
+          "post_lock": "Nachlaufphase",
+          "impedance": "Impedanzmessung",
+          "body_composition": "Körperzusammensetzung",
+          "body_composition_late": "Späte Körperanalysephase",
+          "complete": "Messung abgeschlossen"
+        }
+      }
+    }
+  }
+}
