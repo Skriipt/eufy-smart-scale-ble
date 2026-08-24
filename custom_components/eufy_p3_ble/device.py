@@ -145,12 +145,11 @@ class EufyP3Device:
     def _starts_new_session_without_live(
         self, frame: ScaleFrame, previous: ScaleState
     ) -> bool:
-        """Detect a new lock after a prior post-lock phase when live data was missed."""
+        """Detect a phase regression when a new session's early packets were missed."""
         return (
             self._session_finalized
-            and frame.status is PacketStatus.LOCKED
             and previous.packet_status is not None
-            and previous.packet_status.rank > PacketStatus.LOCKED.rank
+            and frame.status.rank < previous.packet_status.rank
         )
 
     def _accept_frame(self, frame: ScaleFrame) -> bool:
