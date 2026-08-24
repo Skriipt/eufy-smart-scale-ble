@@ -314,16 +314,13 @@ def calculate_body_composition(
 
     muscle_deci_kg = lean_body_mass_deci_kg - bone_deci_kg
 
-    water_base_permille = _trunc((1000 - fat_rate_permille) * 7 / 10)
-    water_rate_permille = _round_half_up_positive(
-        water_base_permille * (1.02 if water_base_permille < 501 else 0.98)
+    water_base_permille = (1000 - fat_rate_permille) * 7 / 10
+    water_rate = water_base_permille * (
+        1.02 if water_base_permille < 501 else 0.98
     )
     if is_athlete:
-        coefficient = 0.996 if is_male else 0.985
-        water_rate_permille = (
-            _round_half_up_positive(water_rate_permille * coefficient) + 4
-        )
-    water_rate_permille = max(350, water_rate_permille)
+        water_rate = water_rate * (0.996 if is_male else 0.985) + 4
+    water_rate_permille = max(350, _trunc(water_rate))
 
     water_deci_kg = _rate_to_deci_kg(weight_deci_kg, water_rate_permille)
     skeletal_muscle_deci_kg = _trunc(water_deci_kg * 0.832 - 27.354)
@@ -343,22 +340,22 @@ def calculate_body_composition(
     subcutaneous_rate_permille = max(10, min(600, subcutaneous_rate_permille))
 
     if is_male:
-        bmr = (
-            _round_half_up_positive(weight_deci_kg * 1.4916)
-            + 878
-            - _round_half_up_positive(height_cm * 0.726)
-            - _round_half_up_positive(age * 8.976)
+        bmr_raw = (
+            weight_deci_kg * 1.4916
+            + 877.8
+            - height_cm * 0.726
+            - age * 8.976
         )
     else:
-        bmr = (
-            _round_half_up_positive(weight_deci_kg * 1.0204)
-            + 865
-            - _round_half_up_positive(height_cm * 0.3934)
-            - _round_half_up_positive(age * 6.204)
+        bmr_raw = (
+            weight_deci_kg * 1.02036
+            + 864.6
+            - height_cm * 0.39336
+            - age * 6.204
         )
     if is_athlete:
-        bmr = _trunc(bmr * 1.16 - 149)
-    bmr = max(500, bmr)
+        bmr_raw = bmr_raw * 1.16 - 149
+    bmr = max(500, _trunc(bmr_raw))
 
     height_squared = height_cm * height_cm
     if is_male:
