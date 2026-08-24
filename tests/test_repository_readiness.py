@@ -22,3 +22,11 @@ def test_hacs_validation_workflow_has_no_ignored_checks() -> None:
     assert "hacs/action@main" in workflow
     assert 'category: "integration"' in workflow
     assert "ignore:" not in workflow
+
+
+def test_hassfest_validation_workflow_is_enabled() -> None:
+    """Run Home Assistant Hassfest validation without bypassing failures."""
+    workflow = Path(".github/workflows/hassfest.yml").read_text()
+
+    assert "home-assistant/actions/hassfest@master" in workflow
+    assert "continue-on-error: true" not in workflow
