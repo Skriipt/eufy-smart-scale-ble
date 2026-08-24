@@ -1,4 +1,4 @@
-"""Sanitized Eufy T9150 advertisement fixtures."""
+"""Synthetic Eufy T9150 advertisement fixtures."""
 
 from __future__ import annotations
 
@@ -7,12 +7,12 @@ def make_packet(
     *,
     sequence: int,
     status: int,
-    weight_kg: float = 82.75,
+    weight_kg: float = 72.35,
     heart_rate: int | None = None,
     impedance_ohm: float | None = None,
 ) -> bytes:
-    """Build a protocol-shaped sanitized T9150 manufacturer payload."""
-    data = bytearray.fromhex("e80712209d0000d6f96100000000010000000000000000")
+    """Build a protocol-shaped synthetic T9150 manufacturer payload."""
+    data = bytearray.fromhex("01020304050000a1b2c300000000010000000000000000")
     data[6] = sequence & 0xFF
     data[10] = status & 0xFF
     weight_raw = round(weight_kg * 100)
@@ -29,15 +29,15 @@ def make_packet(
     return bytes(data)
 
 
-LIVE_82_71 = make_packet(sequence=0x57, status=0x01, weight_kg=82.71)
-FINAL_82_75 = make_packet(sequence=0x58, status=0x05, weight_kg=82.75)
-IMPEDANCE_82_75 = make_packet(
-    sequence=0x5C, status=0x25, weight_kg=82.75, impedance_ohm=435.0
+LIVE_SAMPLE = make_packet(sequence=0x57, status=0x01, weight_kg=72.31)
+FINAL_SAMPLE = make_packet(sequence=0x58, status=0x05, weight_kg=72.35)
+IMPEDANCE_SAMPLE = make_packet(
+    sequence=0x5C, status=0x25, weight_kg=72.35, impedance_ohm=510.0
 )
-HEART_RATE_82_75 = make_packet(
+HEART_RATE_SAMPLE = make_packet(
     sequence=0x61,
     status=0xE5,
-    weight_kg=82.75,
+    weight_kg=72.35,
     heart_rate=72,
-    impedance_ohm=435.0,
+    impedance_ohm=510.0,
 )
