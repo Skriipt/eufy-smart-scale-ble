@@ -14,7 +14,7 @@ from enum import StrEnum
 from math import trunc
 from typing import Final
 
-ALGORITHM_ID: Final = "eufy_p3_compatible_v2"
+ALGORITHM_ID: Final = "eufy_p3_compatible_v3"
 ALGORITHM_STATUS: Final = "experimental"
 
 MIN_HEIGHT_CM: Final = 90
@@ -305,6 +305,9 @@ def calculate_body_composition(
     )
     body_fat_deci_kg = _rate_to_deci_kg(weight_deci_kg, fat_rate_permille)
     lean_body_mass_deci_kg = weight_deci_kg - body_fat_deci_kg
+    lean_body_mass_display_deci_kg = _round_half_up_positive(
+        measurement.weight_kg * 10 - body_fat_deci_kg
+    )
 
     bone_constant = 1.802 if is_male else 2.4569
     bone_deci_kg = _trunc(raw_fat_free_mass * 0.5158 - bone_constant)
@@ -324,8 +327,9 @@ def calculate_body_composition(
     skeletal_muscle_deci_kg = _trunc(water_deci_kg * 0.832 - 27.354)
 
     protein_deci_kg = _round_half_up_positive(water_deci_kg * 0.3133)
-    protein_rate_permille = _deci_kg_to_rate(
-        _trunc(protein_deci_kg - 1.36), weight_deci_kg
+    protein_mass_deci_kg = _trunc(protein_deci_kg - 1.36)
+    protein_rate_permille = _round_half_up_positive(
+        protein_mass_deci_kg * 1000 / weight_deci_kg
     )
     protein_rate_permille = max(20, min(300, protein_rate_permille))
 
@@ -404,7 +408,7 @@ def calculate_body_composition(
         bmi=bmi_tenths / 10,
         body_fat_percent=fat_rate_permille / 10,
         body_fat_mass_kg=body_fat_deci_kg / 10,
-        lean_body_mass_kg=lean_body_mass_deci_kg / 10,
+        lean_body_mass_kg=lean_body_mass_display_deci_kg / 10,
         muscle_mass_kg=muscle_deci_kg / 10,
         bone_mass_kg=bone_deci_kg / 10,
         body_water_percent=water_rate_permille / 10,
