@@ -4,6 +4,17 @@ All notable changes to this project are documented in this file.
 
 The project follows semantic versioning. HACS versions are published as GitHub Releases using `v<version>` tags.
 
+## [0.2.5] - 2026-08-24
+
+### Privacy
+
+- Removed non-synthetic validation data from public test fixtures and release notes.
+- Public regression coverage now uses synthetic values only.
+
+### Changed
+
+- No runtime integration behavior or body-composition calculations changed from `0.2.4`.
+
 ## [0.2.4] - 2026-08-24
 
 ### Fixed
@@ -13,7 +24,7 @@ The project follows semantic versioning. HACS versions are published as GitHub R
 
 ### Added
 
-- Added a real Eufy Smart Scale P3/EufyLife regression vector for 85.75 kg and 452.4 ohm that verifies all 14 calculated body-composition outputs, including Muscle Mass at 59.0 kg.
+- Expanded synthetic regression coverage for all calculated body-composition outputs and display-rounding behavior.
 
 ### Changed
 
