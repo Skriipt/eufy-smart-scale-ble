@@ -68,9 +68,7 @@ async def test_entities_follow_device_updates() -> None:
     assert by_key["weight"].native_value == 82.75
     assert by_key["impedance"].native_value == 435.0
     assert by_key["heart_rate"].native_value == 72
-    assert by_key["last_measurement"].native_value == datetime(
-        2026, 8, 24, tzinfo=UTC
-    )
+    assert by_key["last_measurement"].native_value == datetime(2026, 8, 24, tzinfo=UTC)
     assert by_key["packet_status"].native_value == "complete"
     assert by_key["packet_status"].extra_state_attributes["status_hex"] == "0xE5"
 

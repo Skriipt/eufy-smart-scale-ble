@@ -18,7 +18,10 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up one Eufy P3 from a config entry."""
     from homeassistant.components import bluetooth as ha_bluetooth
-    from homeassistant.components.bluetooth.match import ADDRESS, BluetoothCallbackMatcher
+    from homeassistant.components.bluetooth.match import (
+        ADDRESS,
+        BluetoothCallbackMatcher,
+    )
     from homeassistant.const import Platform
     from homeassistant.util import dt as dt_util
 

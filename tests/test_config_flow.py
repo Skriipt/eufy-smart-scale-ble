@@ -42,9 +42,7 @@ async def test_bluetooth_discovery(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["step_id"] == "bluetooth_confirm"
 
-    with patch(
-        "custom_components.eufy_p3_ble.async_setup_entry", return_value=True
-    ):
+    with patch("custom_components.eufy_p3_ble.async_setup_entry", return_value=True):
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], user_input={}
         )
@@ -95,9 +93,7 @@ async def test_manual_flow_lists_discovered_scale(hass: HomeAssistant) -> None:
     assert result["step_id"] == "user"
     request_scan.assert_awaited_once_with(hass)
 
-    with patch(
-        "custom_components.eufy_p3_ble.async_setup_entry", return_value=True
-    ):
+    with patch("custom_components.eufy_p3_ble.async_setup_entry", return_value=True):
         result = await hass.config_entries.flow.async_configure(
             result["flow_id"], user_input={"address": ADDRESS}
         )

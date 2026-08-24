@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any, override
 
 import voluptuous as vol
-
 from homeassistant.components import bluetooth
 from homeassistant.components.bluetooth import (
     BluetoothServiceInfoBleak,
