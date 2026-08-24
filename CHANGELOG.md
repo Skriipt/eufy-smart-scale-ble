@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 The project follows semantic versioning. HACS versions are published as GitHub Releases using `v<version>` tags.
 
+## [0.2.3] - 2026-08-24
+
+### Changed
+
+- Refreshed public regression fixtures and test vectors with synthetic protocol data.
+- No runtime integration behavior changed from `0.2.2`.
+
 ## [0.2.2] - 2026-08-24
 
 ### Fixed
@@ -18,16 +25,16 @@ The project follows semantic versioning. HACS versions are published as GitHub R
 
 ### Changed
 
-- Calibrated the local body-composition algorithm against a second real Eufy Smart Scale P3 measurement (`85.45 kg`, `454.5 Ω`).
+- Refined the local body-composition fixed-point reconstruction using additional validation data.
 - Changed the internal weight conversion to truncate to Eufy's 0.1 kg fixed-point input instead of rounding it.
-- Truncated the water base value at the fixed-point boundary before applying Eufy's water coefficient, aligning body water and skeletal muscle mass with EufyLife.
-- Preserved fractional BMR intermediates and truncated only the displayed final value, aligning the observed BMR output.
-- Calibrated the protein estimate coefficient to `0.3133`, reproducing `15.2%` and `15.3%` for the two current real-world reference measurements.
+- Truncated the water base value at the fixed-point boundary before applying Eufy's water coefficient.
+- Preserved fractional BMR intermediates and truncated only the displayed final value.
+- Calibrated the protein estimate coefficient for closer EufyLife alignment.
 - Bumped the calculation identifier to `eufy_p3_compatible_v2` so Home Assistant entity attributes show which calculation revision produced a value.
 
 ### Added
 
-- Added regression tests for both observed EufyLife reference measurements.
+- Expanded regression coverage for the reconstructed EufyLife calculation behavior.
 - Added this changelog and automated GitHub Release publishing after successful CI on `main`.
 - Added CI validation to keep `manifest.json`, `pyproject.toml`, and the changelog version synchronized.
 
@@ -43,7 +50,7 @@ The project follows semantic versioning. HACS versions are published as GitHub R
 
 ### Changed
 
-- Refined water, skeletal muscle, and BMR display rounding from the first observed P3 reference measurement.
+- Refined water, skeletal muscle, and BMR display rounding.
 
 ## [0.1.0] - 2026-08-24
 
