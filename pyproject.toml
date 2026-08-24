@@ -14,10 +14,12 @@ dependencies = []
 
 [project.optional-dependencies]
 test = [
+  "aiousbwatcher==1.1.2",
   "mypy>=1.17,<2",
   "pytest-cov>=7,<8",
   "pytest-homeassistant-custom-component==0.13.357",
   "ruff>=0.12,<1",
+  "serialx==1.8.2",
 ]
 
 [tool.setuptools.packages.find]
