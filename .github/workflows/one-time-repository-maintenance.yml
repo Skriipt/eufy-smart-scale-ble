@@ -1,0 +1,82 @@
+name: One-time repository maintenance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/one-time-repository-maintenance.yml
+
+permissions:
+  contents: write
+
+jobs:
+  maintenance:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Configure Git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Remove legacy releases and tags
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for tag in v0.2.1 v0.2.2 v0.2.3; do
+            gh release delete "$tag" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes 2>/dev/null || true
+            git push origin ":refs/tags/$tag" 2>/dev/null || true
+          done
+
+      - name: Replace main history with the current public tree
+        run: |
+          git checkout --orphan public-main
+          git add -A
+          git commit -m "Initialize public integration history"
+          git push --force origin HEAD:main
+
+      - name: Remove the one-time workflow from the new history
+        run: |
+          git rm .github/workflows/one-time-repository-maintenance.yml
+          git commit -m "chore: complete repository maintenance"
+          git push origin HEAD:main
+
+      - name: Remove old development branches
+        run: |
+          git push origin --delete \
+            chore/public-repository-cleanup \
+            feat/body-composition \
+            feat/eufy-p3-integration \
+            feat/eufy-p3-integration-final \
+            feat/eufy-p3-integration-v2 \
+            fix/body-composition-session-boundary \
+            fix/eufy-calibration-v0.2.1 \
+            fix/p3-display-rounding \
+            fix/release-cleanup-v0.2.2 \
+            privacy/sanitize-public-repo-v0.2.3 || true
+
+      - name: Publish clean current release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TARGET=$(git rev-parse HEAD)
+          cat > release-notes.md <<'EOF'
+          ### Changed
+
+          - Refreshed public regression fixtures and test vectors with synthetic protocol data.
+          - No runtime integration behavior changed in this maintenance release.
+          EOF
+          gh release delete v0.2.3 --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes 2>/dev/null || true
+          gh release create v0.2.3 \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$TARGET" \
+            --title "v0.2.3" \
+            --notes-file release-notes.md
