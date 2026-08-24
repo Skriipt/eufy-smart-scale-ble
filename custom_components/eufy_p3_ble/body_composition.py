@@ -65,7 +65,9 @@ class BodyCompositionProfile:
     mode: ProfileMode = ProfileMode.NORMAL
 
 
-def profile_from_mapping(options: Mapping[str, object]) -> BodyCompositionProfile | None:
+def profile_from_mapping(
+    options: Mapping[str, object],
+) -> BodyCompositionProfile | None:
     """Parse validated Home Assistant config-entry options into a profile."""
     sex_raw = options.get("sex")
     height_raw = options.get("height_cm")
@@ -191,9 +193,7 @@ def _validate(profile: BodyCompositionProfile, measurement: BodyMeasurement) -> 
     if not MIN_WEIGHT_KG <= measurement.weight_kg <= MAX_WEIGHT_KG:
         errors.append(f"weight_kg must be {MIN_WEIGHT_KG}..{MAX_WEIGHT_KG}")
     if not MIN_IMPEDANCE_OHM <= measurement.impedance_ohm <= MAX_IMPEDANCE_OHM:
-        errors.append(
-            f"impedance_ohm must be {MIN_IMPEDANCE_OHM}..{MAX_IMPEDANCE_OHM}"
-        )
+        errors.append(f"impedance_ohm must be {MIN_IMPEDANCE_OHM}..{MAX_IMPEDANCE_OHM}")
     if measurement.measured_at.tzinfo is None:
         errors.append("measured_at must be timezone-aware")
     if errors:
@@ -297,9 +297,7 @@ def calculate_body_composition(
     fat_mass_kg = weight_deci_kg / 10 - adjusted_fat_free_mass
     if is_athlete:
         fat_mass_kg = (
-            fat_mass_kg * 0.778 - 0.93
-            if is_male
-            else fat_mass_kg * 0.992 - 1.5
+            fat_mass_kg * 0.778 - 0.93 if is_male else fat_mass_kg * 0.992 - 1.5
         )
 
     fat_rate_permille = _trunc(
@@ -322,9 +320,9 @@ def calculate_body_composition(
     )
     if is_athlete:
         coefficient = 0.996 if is_male else 0.985
-        water_rate_permille = _round_half_up_positive(
-            water_rate_permille * coefficient
-        ) + 4
+        water_rate_permille = (
+            _round_half_up_positive(water_rate_permille * coefficient) + 4
+        )
     water_rate_permille = max(350, water_rate_permille)
 
     water_deci_kg = _rate_to_deci_kg(weight_deci_kg, water_rate_permille)
@@ -336,16 +334,12 @@ def calculate_body_composition(
     )
     protein_rate_permille = max(20, min(300, protein_rate_permille))
 
-    waist_term = (
-        impedance_ohm * 0.031 + bmi_tenths * 0.94 + age * 1.049 - 210.772
-    )
+    waist_term = impedance_ohm * 0.031 + bmi_tenths * 0.94 + age * 1.049 - 210.772
     waist_term = max(10.0, min(300.0, waist_term))
     subcutaneous_deci_kg = body_fat_deci_kg - waist_term * 9.4 / 34
     if is_athlete:
         subcutaneous_deci_kg *= 0.85
-    subcutaneous_rate_permille = _trunc(
-        subcutaneous_deci_kg * 1000 / weight_deci_kg
-    )
+    subcutaneous_rate_permille = _trunc(subcutaneous_deci_kg * 1000 / weight_deci_kg)
     subcutaneous_rate_permille = max(10, min(600, subcutaneous_rate_permille))
 
     if is_male:
@@ -370,8 +364,7 @@ def calculate_body_composition(
     if is_male:
         if height_cm < weight_deci_kg * 0.16 + 63:
             visceral_fat = (
-                weight_deci_kg * 30.5
-                / (height_squared * 0.0826 - height_cm * 0.4 + 48)
+                weight_deci_kg * 30.5 / (height_squared * 0.0826 - height_cm * 0.4 + 48)
                 - 2.9
                 + age * 0.15
             )
@@ -384,8 +377,7 @@ def calculate_body_composition(
             )
     elif height_cm * 5 - 130 < weight_deci_kg:
         visceral_fat = (
-            weight_deci_kg * 50
-            / (height_squared * 0.1158 + height_cm * 1.45 - 120)
+            weight_deci_kg * 50 / (height_squared * 0.1158 + height_cm * 1.45 - 120)
             - 6
             + age * 0.07
         )

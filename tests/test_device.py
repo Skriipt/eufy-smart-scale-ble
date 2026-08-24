@@ -132,9 +132,7 @@ def test_new_weight_cannot_reuse_previous_session_impedance() -> None:
             )
         }
     )
-    assert device.state.body_measurement == BodyMeasurement(
-        83.05, 450.0, clock.value
-    )
+    assert device.state.body_measurement == BodyMeasurement(83.05, 450.0, clock.value)
 
 
 def test_locked_packet_after_complete_starts_new_session_when_live_was_missed() -> None:

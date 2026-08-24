@@ -179,7 +179,9 @@ def test_profile_from_mapping_parses_home_assistant_options() -> None:
         {"sex": "male", "height_cm": True, "age": 28, "profile_mode": "normal"},
     ],
 )
-def test_profile_from_mapping_rejects_invalid_options(options: dict[str, object]) -> None:
+def test_profile_from_mapping_rejects_invalid_options(
+    options: dict[str, object],
+) -> None:
     from custom_components.eufy_p3_ble.body_composition import profile_from_mapping
 
     assert profile_from_mapping(options) is None

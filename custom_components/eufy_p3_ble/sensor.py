@@ -450,9 +450,7 @@ class EufyP3CalculatedSensor(SensorEntity):
                 measurement.impedance_ohm if measurement is not None else None
             ),
             "measurement_timestamp": (
-                measurement.measured_at.isoformat()
-                if measurement is not None
-                else None
+                measurement.measured_at.isoformat() if measurement is not None else None
             ),
             "profile_sex": profile.sex.value if profile is not None else None,
             "profile_height_cm": profile.height_cm if profile is not None else None,
@@ -461,9 +459,7 @@ class EufyP3CalculatedSensor(SensorEntity):
         }
 
     @callback
-    def _handle_composition_update(
-        self, _result: BodyCompositionResult | None
-    ) -> None:
+    def _handle_composition_update(self, _result: BodyCompositionResult | None) -> None:
         self.async_write_ha_state()
 
     def _subscribe_for_test(self) -> None:
