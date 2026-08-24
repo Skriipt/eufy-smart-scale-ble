@@ -4,6 +4,17 @@ All notable changes to this project are documented in this file.
 
 The project follows semantic versioning. HACS versions are published as GitHub Releases using `v<version>` tags.
 
+## [0.2.6] - 2026-08-24
+
+### Added
+
+- Added Home Assistant brand assets for the integration: a 256×256 `icon.png` and a 512×512 `icon@2x.png`.
+- Added an original scale-and-Bluetooth icon without vendor branding for clear display in Home Assistant and HACS.
+
+### Changed
+
+- No runtime integration behavior or body-composition calculations changed from `0.2.5`.
+
 ## [0.2.5] - 2026-08-24
 
 ### Privacy

@@ -9,7 +9,7 @@ MODEL_ID: Final = "eufy T9150"
 MODEL_NAME: Final = "T9150"
 DEVICE_NAME: Final = "Eufy Smart Scale P3"
 MANUFACTURER: Final = "Eufy"
-VERSION: Final = "0.2.0"
+VERSION: Final = "0.2.6"
 
 CONF_SEX: Final = "sex"
 CONF_HEIGHT_CM: Final = "height_cm"
