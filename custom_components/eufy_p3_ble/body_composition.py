@@ -14,7 +14,7 @@ from enum import StrEnum
 from math import trunc
 from typing import Final
 
-ALGORITHM_ID: Final = "eufy_p3_compatible_v2"
+ALGORITHM_ID: Final = "eufy_p3_compatible_v3"
 ALGORITHM_STATUS: Final = "experimental"
 
 MIN_HEIGHT_CM: Final = 90
@@ -327,8 +327,9 @@ def calculate_body_composition(
     skeletal_muscle_deci_kg = _trunc(water_deci_kg * 0.832 - 27.354)
 
     protein_deci_kg = _round_half_up_positive(water_deci_kg * 0.3133)
-    protein_rate_permille = _deci_kg_to_rate(
-        _trunc(protein_deci_kg - 1.36), weight_deci_kg
+    protein_mass_deci_kg = _trunc(protein_deci_kg - 1.36)
+    protein_rate_permille = _round_half_up_positive(
+        protein_mass_deci_kg * 1000 / weight_deci_kg
     )
     protein_rate_permille = max(20, min(300, protein_rate_permille))
 

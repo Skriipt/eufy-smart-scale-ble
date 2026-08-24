@@ -4,6 +4,21 @@ All notable changes to this project are documented in this file.
 
 The project follows semantic versioning. HACS versions are published as GitHub Releases using `v<version>` tags.
 
+## [0.2.4] - 2026-08-24
+
+### Fixed
+
+- Aligned Lean Body Mass display rounding with EufyLife by using the scale's full two-decimal weight for the displayed subtraction while preserving the 0.1 kg fixed-point path used by dependent calculations such as Muscle Mass.
+- Rounded the final Protein percentage to the nearest 0.1% for EufyLife display parity.
+
+### Added
+
+- Added a real Eufy Smart Scale P3/EufyLife regression vector for 85.75 kg and 452.4 ohm that verifies all 14 calculated body-composition outputs, including Muscle Mass at 59.0 kg.
+
+### Changed
+
+- Bumped the local calculation identifier to `eufy_p3_compatible_v3`.
+
 ## [0.2.3] - 2026-08-24
 
 ### Changed
