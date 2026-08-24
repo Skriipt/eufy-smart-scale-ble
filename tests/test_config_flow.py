@@ -40,8 +40,8 @@ NOT_SUPPORTED = BluetoothServiceInfo(
 )
 PROFILE_OPTIONS = {
     CONF_SEX: "male",
-    CONF_HEIGHT_CM: 175,
-    CONF_AGE: 28,
+    CONF_HEIGHT_CM: 180,
+    CONF_AGE: 35,
     CONF_PROFILE_MODE: "normal",
 }
 
