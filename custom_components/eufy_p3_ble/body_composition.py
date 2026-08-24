@@ -315,9 +315,7 @@ def calculate_body_composition(
     muscle_deci_kg = lean_body_mass_deci_kg - bone_deci_kg
 
     water_base_permille = _trunc((1000 - fat_rate_permille) * 7 / 10)
-    water_rate = water_base_permille * (
-        1.02 if water_base_permille < 501 else 0.98
-    )
+    water_rate = water_base_permille * (1.02 if water_base_permille < 501 else 0.98)
     if is_athlete:
         water_rate = water_rate * (0.996 if is_male else 0.985) + 4
     water_rate_permille = max(350, _trunc(water_rate))
@@ -340,19 +338,9 @@ def calculate_body_composition(
     subcutaneous_rate_permille = max(10, min(600, subcutaneous_rate_permille))
 
     if is_male:
-        bmr_raw = (
-            weight_deci_kg * 1.4916
-            + 877.8
-            - height_cm * 0.726
-            - age * 8.976
-        )
+        bmr_raw = weight_deci_kg * 1.4916 + 877.8 - height_cm * 0.726 - age * 8.976
     else:
-        bmr_raw = (
-            weight_deci_kg * 1.02036
-            + 864.6
-            - height_cm * 0.39336
-            - age * 6.204
-        )
+        bmr_raw = weight_deci_kg * 1.02036 + 864.6 - height_cm * 0.39336 - age * 6.204
     if is_athlete:
         bmr_raw = bmr_raw * 1.16 - 149
     bmr = max(500, _trunc(bmr_raw))
