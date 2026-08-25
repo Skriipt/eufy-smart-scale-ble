@@ -1,0 +1,34 @@
+name: Collect protocol references
+
+on:
+  push:
+    branches:
+      - feat/multi-scale-support
+    paths:
+      - .github/workflows/fetch-upstreams.yml
+
+permissions:
+  contents: read
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Collect compact upstream source set
+        run: |
+          set -eux
+          mkdir references
+          git clone --depth=1 https://github.com/bdr99/eufylife-ble-client references/eufylife-ble-client
+          git clone --depth=1 https://github.com/cbondurant/eufy-protocol-reversal references/eufy-protocol-reversal
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/home-assistant/core references/home-assistant-core
+          git -C references/home-assistant-core sparse-checkout set homeassistant/components/eufylife_ble
+          git clone --depth=1 --filter=blob:none --sparse https://github.com/oliexdev/openScale references/openScale
+          git -C references/openScale sparse-checkout set android_app/app/src/main/java/com/health/openscale/core/bluetooth
+          git clone --depth=1 https://github.com/KristianP26/ble-scale-sync references/ble-scale-sync
+          find references -type d -name .git -prune -exec rm -rf {} +
+          zip -qr protocol-references.zip references
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eufy-protocol-references
+          path: protocol-references.zip
+          if-no-files-found: error
