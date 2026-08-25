@@ -1,0 +1,36 @@
+name: Ruff fix once
+
+on:
+  push:
+    branches:
+      - fix/materialize-multiscale-0.3.0
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/materialize-multiscale-0.3.0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - name: Install Ruff
+        run: python -m pip install ruff==0.16.4
+      - name: Apply safe Ruff fixes
+        run: |
+          ruff check --fix .
+          ruff format .
+      - name: Commit fixes
+        run: |
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "style: apply Ruff lint fixes"
+          git push origin HEAD:fix/materialize-multiscale-0.3.0
