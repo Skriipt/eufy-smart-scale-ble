@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from .body_composition import BodyMeasurement
 from .models import ScaleState
@@ -13,6 +13,7 @@ from .protocols.base import MeasurementEvent, MeasurementPhase
 
 StateCallback = Callable[[ScaleState], None]
 Clock = Callable[[], datetime]
+_SAME_SESSION_WINDOW = timedelta(seconds=30)
 
 
 def _utcnow() -> datetime:
@@ -41,6 +42,7 @@ class EufyScaleDevice:
         self._session_finalized = False
         self._session_weight: float | None = None
         self._session_impedance: float | None = None
+        self._session_impedance_at: datetime | None = None
         self._session_time: datetime | None = None
 
     @property
@@ -65,6 +67,7 @@ class EufyScaleDevice:
         self._session_finalized = False
         self._session_weight = None
         self._session_impedance = None
+        self._session_impedance_at = None
         self._session_time = None
 
     def process_event(self, event: MeasurementEvent) -> bool:
@@ -74,6 +77,7 @@ class EufyScaleDevice:
                 self.begin_session()
             if event.impedance_ohm is not None:
                 self._session_impedance = event.impedance_ohm
+                self._session_impedance_at = self._now()
             updated = replace(
                 previous,
                 real_time_weight_kg=(
@@ -97,20 +101,29 @@ class EufyScaleDevice:
                 else previous.sequence,
             )
         else:
+            event_time = self._now()
+            if self._session_time is not None and not (
+                timedelta() <= event_time - self._session_time <= _SAME_SESSION_WINDOW
+            ):
+                self.begin_session()
             if self._should_begin_without_live(event, previous):
                 self.begin_session()
             if not self._session_finalized and event.weight_kg is not None:
-                self._session_time = self._now()
+                self._session_time = event_time
                 self._session_finalized = True
             if event.weight_kg is not None:
                 self._session_weight = event.weight_kg
             if event.impedance_ohm is not None:
                 self._session_impedance = event.impedance_ohm
+                self._session_impedance_at = event_time
             body_measurement = previous.body_measurement
             if (
                 self._session_weight is not None
                 and self._session_impedance is not None
+                and self._session_impedance_at is not None
                 and self._session_time is not None
+                and abs(self._session_impedance_at - self._session_time)
+                <= _SAME_SESSION_WINDOW
             ):
                 body_measurement = BodyMeasurement(
                     self._session_weight,

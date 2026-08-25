@@ -1,7 +1,7 @@
 """Runtime setup coverage for generic Eufy scales."""
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from homeassistant.components import bluetooth
 from homeassistant.const import CONF_MODEL
@@ -35,10 +35,12 @@ PROFILE = {
 RESTORED = BodyMeasurement(71.8, 505.0, datetime(2026, 8, 23, 8, 0, tzinfo=UTC))
 
 
-def service_info(model: str, data: dict[int, bytes]) -> BluetoothServiceInfo:
+def service_info(
+    model: str, data: dict[int, bytes], *, address: str = ADDRESS
+) -> BluetoothServiceInfo:
     return BluetoothServiceInfo(
         name=model,
-        address=ADDRESS,
+        address=address,
         rssi=-55,
         manufacturer_data=data,
         service_data={},
@@ -63,7 +65,7 @@ async def test_p3_setup_processes_cached_advertisement(hass: HomeAssistant) -> N
         patch.object(
             bluetooth,
             "async_last_service_info",
-            return_value=service_info("eufy T9150", {1: LIVE_SAMPLE, 2: FINAL_SAMPLE}),
+            return_value=service_info("", {1: LIVE_SAMPLE, 2: FINAL_SAMPLE}),
         ),
         patch.object(bluetooth, "async_register_callback", return_value=lambda: None),
         patch.object(
@@ -74,6 +76,37 @@ async def test_p3_setup_processes_cached_advertisement(hass: HomeAssistant) -> N
     assert entry.runtime_data.device.state.weight_kg == 72.35
     assert entry.runtime_data.model.model_name == "T9150"
     assert entry.runtime_data.gatt is None
+
+
+async def test_runtime_ignores_cached_advertisement_with_conflicting_identity(
+    hass: HomeAssistant,
+) -> None:
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id=ADDRESS,
+        data={CONF_MODEL: "eufy T9150"},
+        options=PROFILE,
+    )
+    entry.add_to_hass(hass)
+    register = Mock(return_value=lambda: None)
+    with (
+        patch(
+            "custom_components.eufy_smart_scale_ble.async_load_measurement",
+            new=AsyncMock(return_value=None),
+        ),
+        patch.object(
+            bluetooth,
+            "async_last_service_info",
+            return_value=service_info("eufy T9149", {1: FINAL_SAMPLE}),
+        ),
+        patch.object(bluetooth, "async_register_callback", new=register),
+        patch.object(
+            hass.config_entries, "async_forward_entry_setups", new=AsyncMock()
+        ),
+    ):
+        assert await async_setup_entry(hass, entry)
+    assert entry.runtime_data.device.state.weight_kg is None
+    assert register.call_args.args[2] == {"address": ADDRESS}
 
 
 async def test_p3_restores_valid_composition_measurement(hass: HomeAssistant) -> None:

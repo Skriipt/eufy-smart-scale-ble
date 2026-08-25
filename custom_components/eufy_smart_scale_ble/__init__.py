@@ -135,6 +135,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     def _update_ble(service_info: Any, _change: Any) -> None:
         try:
+            if service_info.address != address or (
+                service_info.name and service_info.name not in {address, model.model_id}
+            ):
+                return
             manufacturer_data = service_info.manufacturer_data
             diagnostics.record_advertisement(manufacturer_data)
             for raw in manufacturer_data.values():
@@ -143,7 +147,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 for event in parser.parse(manufacturer_data):
                     _process_event(event)
             if runtime.gatt is not None:
-                hass.async_create_task(runtime.gatt.async_ensure_connected())
+                runtime.gatt.request_connection()
         except Exception as err:
             signature = (type(err), str(err))
             if signature not in logged_errors:

@@ -89,7 +89,8 @@ combines values from different sessions:
 - A weight-only session updates the completed weight without reusing older
   impedance.
 - A complete session pairs final weight and impedance only when both belong to
-  the same weigh-in, then updates the calculated body-composition values.
+  the same weigh-in and arrive within 30 seconds, then updates the calculated
+  body-composition values.
 - A partial session leaves the previous calculated values in place rather than
   replacing them with incomplete data.
 
@@ -176,6 +177,9 @@ Models that advertise sufficient data are handled passively through Home
 Assistant's Bluetooth stack. The integration opens short-lived GATT connections
 only for models or optional metrics that require them.
 
+GATT connection attempts are debounced, each connection is capped at 30 seconds,
+and a completed measurement shortens the remaining lifetime to at most 5 seconds.
+
 Model-specific parsing and session handling prevent duplicate, stale, malformed,
 or out-of-order packets from overwriting a newer completed result.
 
@@ -190,6 +194,10 @@ or out-of-order packets from overwriting a newer completed result.
 - Standard Home Assistant diagnostics exclude Bluetooth addresses, raw packets,
   measurements, profile fields, and precise measurement timestamps. They contain
   only model, protocol, capability, parser/session, and connection metadata.
+- Runtime advertisements are checked against the configured address and, when
+  available, model name. GATT also requires the model's expected notification
+  characteristic. BLE identity is not cryptographically authenticated, so a
+  nearby attacker able to spoof these properties can still forge plausible data.
 - Advanced protocol capture is disabled by default, limited to 100 frames in
   memory, cleared on reload or restart, and excluded from standard diagnostics.
 

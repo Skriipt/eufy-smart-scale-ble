@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from custom_components.eufy_smart_scale_ble.body_composition import BodyMeasurement
 from custom_components.eufy_smart_scale_ble.device import EufyScaleDevice
@@ -22,6 +22,7 @@ from tests.fixtures.builders import (
     build_onebyone_frame,
     build_p2_advertisement,
     build_p3_packet,
+    build_t9140_impedance,
     build_t9140_weight,
 )
 
@@ -73,6 +74,20 @@ def test_c20_passive_weight_impedance_and_heart_rate_complete_session() -> None:
     assert scale.state.impedance_ohm == 543.2
     assert scale.state.heart_rate_bpm == 88
     assert scale.state.body_measurement == BodyMeasurement(64.32, 543.2, NOW)
+
+
+def test_c20_stale_impedance_only_frame_does_not_complete_old_session() -> None:
+    now = [NOW]
+    scale = EufyScaleDevice(now=lambda: now[0])
+    parser = C20AdvertisementParser()
+    locked = parser.parse({1: build_c20_packet(flags=0x05, weight_hundredths=6432)})[0]
+    scale.process_event(locked)
+    now[0] += timedelta(seconds=31)
+    impedance = parser.parse({1: build_c20_packet(flags=0x40, impedance_tenths=5432)})[
+        0
+    ]
+    scale.process_event(impedance)
+    assert scale.state.body_measurement is None
 
 
 def test_c1_passive_weight_does_not_invent_impedance() -> None:
@@ -135,6 +150,21 @@ def test_t9140_gatt_dynamic_then_stable_weight() -> None:
     scale.process_event(final)
     assert scale.state.real_time_weight_kg == 64.4
     assert scale.state.weight_kg == 64.4
+
+
+def test_t9140_stale_impedance_does_not_complete_old_session() -> None:
+    now = [NOW]
+    scale = EufyScaleDevice(now=lambda: now[0])
+    final = parse_t9140_frame(build_t9140_weight(weight_tenths=644, final=True))
+    assert final is not None
+    scale.process_event(final)
+    now[0] += timedelta(seconds=31)
+    impedance = parse_t9140_frame(
+        build_t9140_impedance(impedance_ohm=543), allow_impedance=True
+    )
+    assert impedance is not None
+    scale.process_event(impedance)
+    assert scale.state.body_measurement is None
 
 
 def test_p2_passive_weight_never_produces_impedance() -> None:

@@ -51,6 +51,58 @@ def test_same_session_weight_and_impedance_create_body_measurement() -> None:
     assert device.state.last_measurement_at == measured_at
 
 
+def test_fresh_impedance_only_event_completes_current_session() -> None:
+    clock = Clock()
+    device = EufyScaleDevice(now=clock)
+    device.process_event(
+        MeasurementEvent(MeasurementPhase.LOCKED, weight_kg=64.32, status="locked")
+    )
+    measured_at = device.state.last_measurement_at
+    clock.value += timedelta(seconds=10)
+    device.process_event(
+        MeasurementEvent(
+            MeasurementPhase.IMPEDANCE,
+            impedance_ohm=543.2,
+            status="impedance",
+        )
+    )
+    assert device.state.body_measurement == BodyMeasurement(64.32, 543.2, measured_at)
+
+
+def test_stale_impedance_only_event_does_not_reuse_finalized_weight() -> None:
+    clock = Clock()
+    device = EufyScaleDevice(now=clock)
+    device.process_event(
+        MeasurementEvent(MeasurementPhase.LOCKED, weight_kg=64.32, status="locked")
+    )
+    clock.value += timedelta(seconds=31)
+    device.process_event(
+        MeasurementEvent(
+            MeasurementPhase.IMPEDANCE,
+            impedance_ohm=543.2,
+            status="impedance",
+        )
+    )
+    assert device.state.body_measurement is None
+
+
+def test_finalized_weight_does_not_reuse_stale_impedance() -> None:
+    clock = Clock()
+    device = EufyScaleDevice(now=clock)
+    device.process_event(
+        MeasurementEvent(
+            MeasurementPhase.IMPEDANCE,
+            impedance_ohm=543.2,
+            status="impedance",
+        )
+    )
+    clock.value += timedelta(seconds=31)
+    device.process_event(
+        MeasurementEvent(MeasurementPhase.LOCKED, weight_kg=64.32, status="locked")
+    )
+    assert device.state.body_measurement is None
+
+
 def test_previous_session_impedance_is_never_reused() -> None:
     clock = Clock()
     previous = BodyMeasurement(63.0, 530.0, clock.value)
