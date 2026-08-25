@@ -87,7 +87,8 @@ class EufyGattSession:
             use_services_cache=True,
             ble_device_callback=lambda: ha_bluetooth.async_ble_device_from_address(
                 self._hass, self._address, connectable=True
-            ),
+            )
+            or ble_device,
         )
         notify = self._resolve_notify(client.services)
         if notify is None:
