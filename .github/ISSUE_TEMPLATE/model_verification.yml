@@ -1,0 +1,82 @@
+name: Model verification
+description: Help verify an upstream-supported Eufy scale with privacy-safe information.
+title: "[Model verification] "
+labels:
+  - verification
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping verify hardware the project does not own. Please use only Home Assistant's sanitized diagnostics. Do not upload raw BLE captures, Bluetooth addresses, screenshots of measurements, or personal body/profile data.
+  - type: dropdown
+    id: model
+    attributes:
+      label: Scale model
+      options:
+        - Smart Scale A1 / T9120
+        - Smart Scale C20 / T9130
+        - Smart Scale / T9140
+        - Smart Scale C1 / T9146
+        - Smart Scale P1 / T9147
+        - Smart Scale P2 / T9148
+        - Smart Scale P2 Pro / T9149
+        - Smart Scale P3 / T9150
+    validations:
+      required: true
+  - type: input
+    id: integration_version
+    attributes:
+      label: Integration version
+      placeholder: "0.3.0"
+    validations:
+      required: true
+  - type: input
+    id: home_assistant_version
+    attributes:
+      label: Home Assistant version
+      placeholder: "2026.8.x"
+    validations:
+      required: true
+  - type: dropdown
+    id: bluetooth_path
+    attributes:
+      label: Bluetooth path
+      options:
+        - Local Home Assistant Bluetooth adapter
+        - ESPHome Bluetooth proxy
+        - Other Home Assistant Bluetooth adapter
+    validations:
+      required: true
+  - type: dropdown
+    id: capability
+    attributes:
+      label: Capability tested
+      options:
+        - Live weight
+        - Final weight
+        - Heart rate
+        - Impedance
+        - Battery
+        - Experimental body composition
+        - Connection / GATT behavior
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Result
+      description: Describe whether the capability worked and any non-personal behavioral details needed to reproduce the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized diagnostics (optional)
+      description: Attach or paste only the integration's normal privacy-safe Home Assistant diagnostics.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy confirmation
+      options:
+        - label: I verified that my attachment does not contain a Bluetooth/MAC address, raw BLE payload, weight, impedance, heart rate, body profile, or other personal measurement data.
+          required: true

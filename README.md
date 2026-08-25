@@ -1,87 +1,105 @@
-# Eufy Smart Scale P3 BLE for Home Assistant
+# Eufy Smart Scale BLE for Home Assistant
 
 [![Tests](https://github.com/Skriipt/eufy-smart-scale-ble/actions/workflows/tests.yml/badge.svg)](https://github.com/Skriipt/eufy-smart-scale-ble/actions/workflows/tests.yml)
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/)
 [![Home Assistant 2026.8+](https://img.shields.io/badge/Home%20Assistant-2026.8%2B-41BDF5.svg)](https://www.home-assistant.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A local, cloud-free Home Assistant custom integration for the **Eufy Smart Scale P3** with Bluetooth name **`eufy T9150`**.
+A local, cloud-free Home Assistant integration for Eufy smart scales over Bluetooth Low Energy.
 
-The integration reads Bluetooth Low Energy advertisements through Home Assistant's Bluetooth stack. It works with a local Bluetooth adapter or ESPHome Bluetooth proxies and does not require an Eufy account, cloud access, or an active GATT connection to the scale.
+The integration supports every scale model currently handled by Home Assistant's EufyLife BLE integration. It uses passive advertisements where the scale broadcasts enough data and opens a short-lived GATT connection only for models or optional capabilities that require one. No Eufy account, cloud API, or vendor credentials are required.
 
 > [!NOTE]
-> This project currently supports only the Eufy Smart Scale P3 (`T9150`). It is an independent community project and is not affiliated with Eufy or Anker Innovations.
+> This is an independent community project and is not affiliated with Eufy or Anker Innovations. Only the P3/T9150 is hardware-verified by this project; other models are implemented from compatible upstream protocol sources and are clearly marked accordingly.
 
-## Why this integration exists
+## Supported models
 
-Some Bluetooth proxies expose more than one manufacturer-data payload in one advertisement. An older live payload may therefore appear next to a newer completed measurement. Selecting only the first payload can leave the final weight unchanged.
+| Model | Weight / final | Heart rate | Impedance | Body composition | Transport |
+|---|---|---|---|---|---|
+| Smart Scale A1 / T9120 | Upstream Validated | — | Upstream Validated | Experimental opt-in | GATT |
+| Smart Scale C20 / T9130 | Upstream Validated | Upstream Validated | Upstream Validated | Experimental opt-in | Advertisement |
+| Smart Scale / T9140 | Upstream Validated | — | Experimental, off by default | Experimental, off by default | GATT |
+| Smart Scale C1 / T9146 | Upstream Validated | — | Upstream Validated via optional GATT | Experimental opt-in | Advertisement + optional GATT |
+| Smart Scale P1 / T9147 | Upstream Validated | — | Upstream Validated via optional GATT | Experimental opt-in | Advertisement + optional GATT |
+| Smart Scale P2 / T9148 | Upstream Validated | — | Unsupported | Unavailable | Advertisement |
+| Smart Scale P2 Pro / T9149 | Upstream Validated | Upstream Validated | Unsupported | Unavailable | Advertisement |
+| Smart Scale P3 / T9150 | **Verified** | **Verified** | **Verified** | Experimental algorithm, enabled | Advertisement |
 
-This integration parses every valid T9150 payload, compares the scale's 8-bit sequence counters, handles counter wraparound, and selects the newest measurement phase. Duplicate, stale, malformed, and out-of-order packets are ignored safely.
+Support levels are tracked per capability, not just per model:
 
-Version 0.2 adds optional, fully local body-composition estimates. The scale directly transmits weight, impedance, and heart rate. When a personal profile is configured, Home Assistant combines the completed weight and impedance from the same weighing session with that profile to estimate the additional values shown below.
+- **Verified** — tested with real hardware by this project.
+- **Upstream Validated** — supported by reputable compatible upstream implementations, but not hardware-tested by this project.
+- **Experimental** — plausible protocol evidence exists, but the capability is intentionally gated until further verification.
+- **Unsupported** — the protocol is not reliable enough to expose the capability.
+
+See [the full support matrix](docs/support-matrix.md) and [protocol sources](docs/protocol-sources.md).
 
 ## Features
 
-- Fully local BLE advertisement processing
-- Automatic Bluetooth discovery
-- Support for ESPHome Bluetooth proxies
-- Reliable completed-weight detection
-- Same-session pairing of weight and impedance
-- Optional local body-composition profile
-- 14 locally calculated body-composition entities
-- Restored raw measurement and recalculation after restart
+- Fully local BLE processing
+- Automatic Bluetooth discovery for all eight supported model IDs
+- Local Bluetooth adapters and ESPHome Bluetooth proxies
+- Passive advertisement processing wherever possible
+- Short-lived GATT connections only when needed
+- Reliable live/final-weight handling
+- Same-session protection for weight and impedance
+- Capability-gated entities per model
+- Optional local body-composition estimates when reliable impedance is available
+- Restored completed measurements and local recalculation after restart
+- Privacy-safe Home Assistant diagnostics
+- Explicit, memory-only advanced protocol capture option
 - No Eufy credentials, API, or cloud connection
 
 ## Entities
 
-### Directly received from the scale
+Entities are created only when the configured model can provide the underlying capability. Depending on the scale, these may include:
 
-| Entity | Description |
-|---|---|
-| **Weight** | Most recent completed weight measurement |
-| **Real-time weight** | Live weight while a measurement is in progress |
-| **Impedance** | Raw bioelectrical impedance in ohms |
-| **Heart rate** | Heart rate transmitted by the final measurement packets |
-| **Last measurement** | Timestamp when the latest weighing session became final |
-| **Packet status** | Diagnostic phase, status code, sequence number, and raw packet |
+- **Weight** — most recent completed weight
+- **Real-time weight** — live weight during a measurement
+- **Impedance** — raw impedance when reliably decoded
+- **Heart rate** — when supported by the model/protocol
+- **Battery** — for GATT models that expose the standard battery characteristic
+- **Last measurement** — timestamp of the latest final measurement
+- **Packet status** — privacy-safe diagnostic parser/session status
 
-### Locally calculated
+When body composition is enabled and the scale provides a reliable final weight plus impedance from the same measurement session, the integration can calculate:
 
-| Entity | Unit |
-|---|---:|
-| **BMI** | — |
-| **Body fat** | % |
-| **Body fat mass** | kg |
-| **Lean body mass** | kg |
-| **Muscle mass** | kg |
-| **Bone mass** | kg |
-| **Body water** | % |
-| **Basal metabolic rate** | kcal/day |
-| **Visceral fat** | level |
-| **Protein** | % |
-| **Skeletal muscle mass** | kg |
-| **Subcutaneous fat** | % |
-| **Body age** | years |
-| **Body type** | category |
-
-Every calculated entity includes attributes identifying the algorithm, its experimental status, the weight and impedance used, the measurement timestamp, and the profile inputs.
+- BMI
+- body fat percentage and mass
+- lean body mass
+- muscle mass
+- bone mass
+- body water
+- basal metabolic rate
+- visceral fat
+- protein
+- skeletal muscle mass
+- subcutaneous fat
+- body age
+- body type
 
 > [!WARNING]
-> Body-composition values from consumer bioimpedance scales are estimates, not direct measurements or medical data. The local algorithm is an experimental Eufy-P3-compatible reconstruction. Small differences from the EufyLife app can occur, and the protein estimate is currently the least validated output.
+> Consumer bioimpedance values are estimates, not medical measurements. The local body-composition algorithm is an experimental reconstruction calibrated primarily against the P3/T9150. Cross-model calculations are disabled by default and must be explicitly enabled where available.
+
+### Why P2/P2 Pro do not expose body composition
+
+Public protocol implementations expose a 24-bit field for P2/P2 Pro, but available real-hardware evidence shows that treating it as impedance produces implausible resistance values. This integration therefore keeps that field opaque and never labels it as impedance or feeds it into body-composition formulas.
 
 ## Requirements
 
 - Home Assistant **2026.8.0 or newer**
-- Home Assistant's Bluetooth integration configured and working
-- A local Bluetooth adapter or ESPHome Bluetooth proxy within range
-- Eufy Smart Scale P3 advertising as `eufy T9150`
+- Home Assistant Bluetooth configured and working
+- A local Bluetooth adapter or compatible ESPHome Bluetooth proxy within range
+- One of the supported Eufy scale models listed above
 
 ## Installation
 
 ### HACS
 
+Until this repository is accepted into the HACS default store, install it as a custom repository:
+
 1. Open **HACS → Integrations**.
-2. Open the menu in the top-right corner and select **Custom repositories**.
+2. Open the top-right menu and select **Custom repositories**.
 3. Add:
 
    ```text
@@ -89,95 +107,111 @@ Every calculated entity includes attributes identifying the algorithm, its exper
    ```
 
 4. Select **Integration** as the category.
-5. Open **Eufy Smart Scale P3 BLE** in HACS and select **Download**.
+5. Open **Eufy Smart Scale BLE** and select **Download**.
 6. Restart Home Assistant.
 
 ### Manual installation
 
-Copy `custom_components/eufy_p3_ble` to:
+Copy `custom_components/eufy_smart_scale_ble` to:
 
 ```text
-/config/custom_components/eufy_p3_ble
+/config/custom_components/eufy_smart_scale_ble
 ```
 
-The final path must contain the manifest directly:
+The manifest must then be at:
 
 ```text
-/config/custom_components/eufy_p3_ble/manifest.json
+/config/custom_components/eufy_smart_scale_ble/manifest.json
 ```
 
 Restart Home Assistant after copying the files.
+
+## Upgrading from 0.2.x to 0.3.0
+
+Version 0.3.0 changes the Home Assistant integration domain from `eufy_p3_ble` to `eufy_smart_scale_ble`. Home Assistant config-entry domains cannot be safely rewritten in place, so existing early installations need a one-time re-add:
+
+1. Remove the existing **Eufy Smart Scale P3 BLE** config entry.
+2. Update/reinstall the integration through HACS or replace the manual integration files.
+3. If a stale `/config/custom_components/eufy_p3_ble` directory remains, remove it.
+4. Restart Home Assistant.
+5. Add **Eufy Smart Scale BLE** again.
+6. Re-enter body-composition profile options if used.
+
+Entity registry entries may be recreated because the integration domain changed.
 
 ## Initial setup
 
 1. Wake the scale by stepping on it briefly.
 2. Open **Settings → Devices & services**.
-3. Confirm the discovered **Eufy Smart Scale P3 BLE** integration.
+3. Confirm the discovered **Eufy Smart Scale BLE** device.
 
-You can also select **Add integration**, search for **Eufy Smart Scale P3 BLE**, and choose a currently discovered scale. No YAML configuration is required.
+You can also select **Add integration**, search for **Eufy Smart Scale BLE**, and choose a currently discovered supported scale. No YAML configuration is required.
 
-## Configure body-composition calculations
+## Options and extended metrics
 
-1. Open **Settings → Devices & services**.
-2. Find **Eufy Smart Scale P3 BLE**.
-3. Select **Configure**.
-4. Enter the same profile values used in EufyLife:
-   - sex used for calculation;
-   - height in centimetres;
-   - age;
-   - Normal or Athlete profile mode.
-5. Submit the form.
+Options are model-dependent:
 
-The last complete raw measurement is stored locally in Home Assistant. Changing the profile reloads the integration and immediately recalculates that measurement; another weigh-in is not required.
+- **P3/T9150:** body-composition profile is available by default.
+- **C20/T9130:** experimental cross-model body composition can be explicitly enabled.
+- **A1/T9120:** GATT is required; experimental cross-model body composition can be enabled when desired.
+- **C1/T9146 and P1/T9147:** passive weight works without a connection. Enable **Extended metrics** to permit short GATT sessions for impedance/battery, then optionally enable experimental cross-model composition.
+- **T9140:** experimental impedance is disabled by default because several characteristic/firmware variants exist.
+- **P2/T9148 and P2 Pro/T9149:** no impedance/body-composition option is offered.
+- **Protocol capture:** advanced, disabled by default, memory-only, and never included in normal diagnostics.
 
-Calculated entities remain unavailable until both a valid profile and a complete weight-plus-impedance measurement are present.
+For body-composition calculations, configure the profile fields shown by the integration. The latest legitimate complete weight/impedance measurement is stored locally so profile changes can recalculate without another weigh-in.
 
-The current release supports **one calculation profile per configured scale**. If several people use the same scale, the raw entities remain correct, but the calculated entities always use the one profile configured for this integration entry.
+## Measurement safety
 
-## Measurement behavior
+A body-composition measurement is created only when final weight and impedance belong to the same active weighing session. A new weight can never silently reuse impedance from a previous measurement.
 
-A new set of calculated values is published only after weight and impedance have both arrived within the same weighing session. A weight-only reading never combines a new weight with an impedance retained from an older session.
-
-Until a new complete body-composition measurement arrives, the previous completed values remain visible. This avoids replacing useful data with partial readings.
+Unsupported or experimental raw fields are never converted into normal entities unless the relevant option explicitly enables an experimental path.
 
 ## Avoiding duplicate devices
 
-Home Assistant's official **EufyLife** integration may also discover the same T9150 scale. Remove or ignore its entry for this Bluetooth address before configuring this custom integration, otherwise Home Assistant may create duplicate devices and sensors.
+Home Assistant's official **EufyLife** integration may also discover the same scale. Remove or ignore its entry for the same Bluetooth device before configuring this custom integration, otherwise Home Assistant may create duplicate devices and sensors.
 
-This integration uses its own domain, `eufy_p3_ble`, and does not replace or modify Home Assistant Core files.
+## Diagnostics and privacy
+
+Standard Home Assistant diagnostics intentionally exclude:
+
+- Bluetooth/MAC address
+- raw advertisements/notifications
+- weight
+- impedance
+- heart rate
+- age, height, sex, or profile mode
+- precise measurement timestamps
+
+They contain only safe technical metadata such as model, protocol family, transport, support levels, parser status names, packet lengths, and counters.
+
+The optional advanced protocol-capture mode stores raw packets only in a bounded in-memory buffer. It is off by default, not persisted, cleared on reload/restart, and never added to normal diagnostics. Raw BLE data can encode personal measurements and should not be uploaded publicly without careful review.
+
+See [Model verification](docs/model-verification.md) if you want to help verify hardware we do not own.
 
 ## Troubleshooting
 
-Check the following first:
+Check these first:
 
-- A Bluetooth adapter or proxy is within range of the scale.
-- The scale appears in Home Assistant's Bluetooth diagnostics while awake.
-- The official EufyLife entry for the same Bluetooth address has been removed or ignored.
-- Home Assistant is running version 2026.8.0 or newer.
-- `manifest.json` is directly inside `/config/custom_components/eufy_p3_ble/`.
-- Body-composition profile options have been saved.
-- Bare feet remain on all electrodes until the scale completes its analysis.
+- A Bluetooth adapter or proxy is within range.
+- The scale appears in Home Assistant Bluetooth diagnostics while awake.
+- The official EufyLife entry for the same device has been removed or ignored.
+- Home Assistant is 2026.8.0 or newer.
+- `manifest.json` is directly inside `/config/custom_components/eufy_smart_scale_ble/`.
+- For C1/P1 extended metrics, the **Extended metrics** option is enabled.
+- Body-composition profile/options are configured for models that support them.
 
 ### Debug logging
 
-Add temporarily to `configuration.yaml`:
+Temporarily add:
 
 ```yaml
 logger:
   logs:
-    custom_components.eufy_p3_ble: debug
+    custom_components.eufy_smart_scale_ble: debug
 ```
 
-Restart Home Assistant and perform a complete measurement. The **Packet status** entity also exposes the last accepted raw packet as a diagnostic attribute.
-
-## Privacy
-
-- No cloud connection
-- No Eufy account or credentials
-- No Eufy API access
-- Profile data is stored only in the Home Assistant config entry
-- The latest complete weight/impedance pair is stored only in Home Assistant's local storage
-- All parsing and calculations run locally
+Restart Home Assistant and perform a measurement. Prefer the integration's privacy-safe diagnostics when opening a public issue.
 
 ## Development
 
@@ -186,10 +220,10 @@ python -m pip install -e '.[test]'
 ruff format --check .
 ruff check .
 mypy
-pytest --cov=custom_components/eufy_p3_ble --cov-branch
+pytest --cov=custom_components/eufy_smart_scale_ble --cov-branch
 ```
 
-The test suite covers packet ordering, session boundaries, persistence serialization, profile parsing, body-composition reference vectors, Home Assistant options, runtime setup, and sensor behavior.
+All committed BLE fixtures must be synthetic. Do not commit raw captures or personal measurement/profile data.
 
 ## License
 

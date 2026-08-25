@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from custom_components.eufy_p3_ble.body_composition import (
+from custom_components.eufy_smart_scale_ble.body_composition import (
     BodyCompositionProfile,
     BodyMeasurement,
     BodyType,
@@ -141,14 +141,14 @@ def test_rejects_inputs_outside_validated_ranges(
 
 
 def test_profile_from_mapping_requires_all_profile_fields() -> None:
-    from custom_components.eufy_p3_ble.body_composition import profile_from_mapping
+    from custom_components.eufy_smart_scale_ble.body_composition import profile_from_mapping
 
     assert profile_from_mapping({}) is None
     assert profile_from_mapping({"sex": "male", "height_cm": 180, "age": 35}) is None
 
 
 def test_profile_from_mapping_parses_home_assistant_options() -> None:
-    from custom_components.eufy_p3_ble.body_composition import (
+    from custom_components.eufy_smart_scale_ble.body_composition import (
         ProfileMode,
         Sex,
         profile_from_mapping,
@@ -184,7 +184,7 @@ def test_profile_from_mapping_parses_home_assistant_options() -> None:
 def test_profile_from_mapping_rejects_invalid_options(
     options: dict[str, object],
 ) -> None:
-    from custom_components.eufy_p3_ble.body_composition import profile_from_mapping
+    from custom_components.eufy_smart_scale_ble.body_composition import profile_from_mapping
 
     assert profile_from_mapping(options) is None
 
@@ -202,7 +202,7 @@ def test_rejects_timezone_naive_measurement() -> None:
 
 
 def test_fixed_point_and_band_helpers_cover_all_boundaries() -> None:
-    from custom_components.eufy_p3_ble import body_composition as composition
+    from custom_components.eufy_smart_scale_ble import body_composition as composition
 
     assert composition._deci_kg_to_rate(10, 0) == 0
     assert [
@@ -244,7 +244,7 @@ def test_body_type_classifier_covers_all_nine_states(
     muscle_mass: int,
     expected: BodyType,
 ) -> None:
-    from custom_components.eufy_p3_ble import body_composition as composition
+    from custom_components.eufy_smart_scale_ble import body_composition as composition
 
     assert (
         composition._classify_body_type(

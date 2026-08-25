@@ -1,4 +1,4 @@
-"""Fixtures for Eufy P3 custom integration tests."""
+"""Fixtures for Eufy Smart Scale BLE custom integration tests."""
 
 from __future__ import annotations
 

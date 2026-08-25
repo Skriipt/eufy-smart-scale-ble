@@ -1,0 +1,152 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "This scale is already configured.",
+      "already_in_progress": "Configuration for this scale is already in progress.",
+      "no_devices_found": "No supported Eufy Smart Scale was found. Wake the scale and try again.",
+      "not_supported": "This Bluetooth device is not a supported Eufy Smart Scale."
+    },
+    "step": {
+      "bluetooth_confirm": {
+        "description": "Add {name} to Home Assistant?",
+        "title": "Eufy Smart Scale BLE"
+      },
+      "user": {
+        "data": {
+          "address": "Scale"
+        },
+        "description": "Select the Eufy Smart Scale you want to add.",
+        "title": "Add Eufy Smart Scale"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Scale options",
+        "description": "Enable only the optional or experimental features you need. Body-composition estimates require a compatible same-session impedance reading and are not medical measurements.",
+        "data": {
+          "sex": "Sex used for calculation",
+          "height_cm": "Height (cm)",
+          "age": "Age",
+          "profile_mode": "Profile mode",
+          "extended_metrics": "Extended metrics over GATT",
+          "experimental_cross_model_composition": "Experimental cross-model body composition",
+          "experimental_impedance": "Experimental impedance decoding",
+          "protocol_capture": "Advanced in-memory protocol capture"
+        },
+        "data_description": {
+          "sex": "Select the calculation branch matching the profile configured in EufyLife.",
+          "height_cm": "Height from 90 to 220 centimetres.",
+          "age": "Age from 6 to 99 years.",
+          "profile_mode": "Use Athlete only when the EufyLife profile also uses Athlete Mode.",
+          "extended_metrics": "Opens short-lived GATT connections on supported models to retrieve impedance and battery data.",
+          "experimental_cross_model_composition": "Uses the P3-derived local calculation algorithm with upstream-validated impedance from another model.",
+          "experimental_impedance": "Exposes the T9140 impedance field for testing. Hardware variants are not yet verified by this project.",
+          "protocol_capture": "Stores a bounded raw BLE capture in memory until reload/restart. Raw BLE can contain personal measurement data; never attach it to public issues without manual sanitization."
+        }
+      }
+    }
+  },
+  "selector": {
+    "sex": {
+      "options": {
+        "male": "Male",
+        "female": "Female"
+      }
+    },
+    "profile_mode": {
+      "options": {
+        "normal": "Normal",
+        "athlete": "Athlete"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "weight": {
+        "name": "Weight"
+      },
+      "real_time_weight": {
+        "name": "Real-time weight"
+      },
+      "impedance": {
+        "name": "Impedance"
+      },
+      "heart_rate": {
+        "name": "Heart rate"
+      },
+      "last_measurement": {
+        "name": "Last measurement"
+      },
+      "packet_status": {
+        "name": "Packet status",
+        "state": {
+          "live": "Live measurement",
+          "locked": "Weight locked",
+          "post_lock": "Post-lock phase",
+          "impedance": "Impedance measurement",
+          "body_composition": "Body composition",
+          "body_composition_late": "Late body-composition phase",
+          "complete": "Measurement complete"
+        }
+      },
+      "bmi": {
+        "name": "BMI"
+      },
+      "body_fat": {
+        "name": "Body fat"
+      },
+      "body_fat_mass": {
+        "name": "Body fat mass"
+      },
+      "lean_body_mass": {
+        "name": "Lean body mass"
+      },
+      "muscle_mass": {
+        "name": "Muscle mass"
+      },
+      "bone_mass": {
+        "name": "Bone mass"
+      },
+      "body_water": {
+        "name": "Body water"
+      },
+      "bmr": {
+        "name": "Basal metabolic rate"
+      },
+      "visceral_fat": {
+        "name": "Visceral fat"
+      },
+      "protein": {
+        "name": "Protein"
+      },
+      "skeletal_muscle_mass": {
+        "name": "Skeletal muscle mass"
+      },
+      "subcutaneous_fat": {
+        "name": "Subcutaneous fat"
+      },
+      "body_age": {
+        "name": "Body age"
+      },
+      "body_type": {
+        "name": "Body type",
+        "state": {
+          "hidden_obese": "Hidden-obese",
+          "under_exercised": "Under-exercised",
+          "thin": "Thin",
+          "obese": "Obese",
+          "average": "Average",
+          "thin_and_muscular": "Thin and muscular",
+          "muscular_overweight": "Muscular overweight",
+          "standard_muscular": "Standard muscular",
+          "very_muscular": "Very muscular"
+        }
+      },
+      "battery": {
+        "name": "Battery"
+      }
+    }
+  }
+}

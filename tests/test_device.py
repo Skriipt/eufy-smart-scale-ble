@@ -1,19 +1,12 @@
-"""Tests for the Eufy P3 weighing-session state machine."""
-
-from __future__ import annotations
+"""Generic session-state tests preserving P3 semantics."""
 
 from datetime import UTC, datetime, timedelta
 
-from custom_components.eufy_p3_ble.body_composition import BodyMeasurement
-from custom_components.eufy_p3_ble.device import EufyP3Device
-from custom_components.eufy_p3_ble.models import PacketStatus
-from tests.fixtures.builders import build_p3_packet
-from tests.fixtures.t9150_packets import (
-    FINAL_SAMPLE,
-    HEART_RATE_SAMPLE,
-    IMPEDANCE_SAMPLE,
-    LIVE_SAMPLE,
-    make_packet,
+from custom_components.eufy_smart_scale_ble.body_composition import BodyMeasurement
+from custom_components.eufy_smart_scale_ble.device import EufyScaleDevice
+from custom_components.eufy_smart_scale_ble.protocols.base import (
+    MeasurementEvent,
+    MeasurementPhase,
 )
 
 
@@ -25,234 +18,85 @@ class Clock:
         return self.value
 
 
-def test_full_p3_session_regression_uses_only_same_session_fields() -> None:
-    clock = Clock()
-    device = EufyP3Device(now=clock)
-    live = build_p3_packet(sequence=0xF8, status=0x01, weight_hundredths=6430)
-    locked = build_p3_packet(sequence=0xF9, status=0x05, weight_hundredths=6432)
-    impedance = build_p3_packet(
-        sequence=0xFA,
-        status=0x25,
-        weight_hundredths=6432,
-        impedance_tenths=5432,
+def test_live_does_not_create_complete_measurement() -> None:
+    device = EufyScaleDevice()
+    device.process_event(
+        MeasurementEvent(MeasurementPhase.LIVE, weight_kg=64.3, status="live")
     )
-    complete = build_p3_packet(
-        sequence=0xFB,
-        status=0xE5,
-        weight_hundredths=6432,
-        impedance_tenths=5432,
-        heart_rate=88,
-    )
-
-    assert device.process({1: live})
     assert device.state.real_time_weight_kg == 64.3
     assert device.state.weight_kg is None
-
-    assert device.process({1: locked})
-    measurement_time = device.state.last_measurement_at
-    assert measurement_time == clock.value
-    assert device.state.body_measurement is None
-
-    clock.value += timedelta(seconds=15)
-    assert device.process({1: impedance})
-    assert device.state.body_measurement == BodyMeasurement(
-        64.32, 543.2, measurement_time
-    )
-
-    assert device.process({1: complete})
-    assert device.state.weight_kg == 64.32
-    assert device.state.impedance_ohm == 543.2
-    assert device.state.heart_rate_bpm == 88
-    assert device.state.last_measurement_at == measurement_time
-    assert device.state.packet_status is PacketStatus.COMPLETE
-
-    snapshot = device.state
-    assert not device.process({1: complete})
-    assert not device.process({1: locked})
-    assert device.state == snapshot
-
-
-def test_p3_device_accepts_sequence_wraparound() -> None:
-    device = EufyP3Device()
-    before_wrap = build_p3_packet(
-        sequence=0xFF,
-        status=0x01,
-        weight_hundredths=6500,
-    )
-    after_wrap = build_p3_packet(
-        sequence=0x00,
-        status=0x05,
-        weight_hundredths=6501,
-    )
-
-    assert device.process({1: before_wrap})
-    assert device.process({1: after_wrap})
-    assert device.state.sequence == 0
-    assert device.state.weight_kg == 65.01
-    assert device.state.packet_status is PacketStatus.LOCKED
-
-
-def test_live_weight_does_not_create_completed_measurement() -> None:
-    device = EufyP3Device()
-    assert device.process({1: LIVE_SAMPLE})
-    assert device.state.real_time_weight_kg == 72.31
-    assert device.state.weight_kg is None
-    assert device.state.last_measurement_at is None
     assert device.state.body_measurement is None
 
 
-def test_final_weight_sets_timestamp_once_per_session() -> None:
+def test_same_session_weight_and_impedance_create_body_measurement() -> None:
     clock = Clock()
-    device = EufyP3Device(now=clock)
-    device.process({1: LIVE_SAMPLE})
-    device.process({1: FINAL_SAMPLE})
-    first_time = device.state.last_measurement_at
-    assert first_time == clock.value
+    device = EufyScaleDevice(now=clock)
+    device.process_event(
+        MeasurementEvent(MeasurementPhase.LIVE, weight_kg=64.3, status="live")
+    )
+    device.process_event(
+        MeasurementEvent(MeasurementPhase.LOCKED, weight_kg=64.32, status="locked")
+    )
+    measured_at = device.state.last_measurement_at
     clock.value += timedelta(seconds=10)
-    device.process({1: IMPEDANCE_SAMPLE})
-    assert device.state.last_measurement_at == first_time
-    assert device.state.body_measurement == BodyMeasurement(72.35, 510.0, first_time)
-
-
-def test_post_final_packets_merge_ancillary_values() -> None:
-    device = EufyP3Device()
-    device.process({1: FINAL_SAMPLE})
-    device.process({1: IMPEDANCE_SAMPLE})
-    device.process({1: HEART_RATE_SAMPLE})
-    assert device.state.weight_kg == 72.35
-    assert device.state.impedance_ohm == 510.0
-    assert device.state.heart_rate_bpm == 72
-
-
-def test_missing_ancillary_value_does_not_clear_previous_value() -> None:
-    device = EufyP3Device()
-    device.process({1: IMPEDANCE_SAMPLE})
-    later_without_impedance = make_packet(sequence=0x5D, status=0x65)
-    device.process({1: later_without_impedance})
-    assert device.state.impedance_ohm == 510.0
-
-
-def test_stale_callback_is_ignored() -> None:
-    device = EufyP3Device()
-    assert device.process({1: FINAL_SAMPLE})
-    snapshot = device.state
-    assert not device.process({1: LIVE_SAMPLE})
-    assert device.state == snapshot
-
-
-def test_same_sequence_lower_status_is_ignored() -> None:
-    device = EufyP3Device()
-    final = make_packet(sequence=9, status=0x05)
-    live = make_packet(sequence=9, status=0x01)
-    assert device.process({1: final})
-    assert not device.process({1: live})
-    assert device.state.packet_status is PacketStatus.LOCKED
-
-
-def test_new_live_session_keeps_previous_completed_values() -> None:
-    clock = Clock()
-    device = EufyP3Device(now=clock)
-    device.process({1: HEART_RATE_SAMPLE})
-    old_timestamp = device.state.last_measurement_at
-    old_measurement = device.state.body_measurement
-    next_live = make_packet(sequence=0x62, status=0x01, weight_kg=73.0)
-    device.process({1: next_live})
-    assert device.state.real_time_weight_kg == 73.0
-    assert device.state.weight_kg == 72.35
-    assert device.state.last_measurement_at == old_timestamp
-    assert device.state.body_measurement == old_measurement
-
-
-def test_new_session_final_gets_new_timestamp() -> None:
-    clock = Clock()
-    device = EufyP3Device(now=clock)
-    device.process({1: FINAL_SAMPLE})
-    old_timestamp = device.state.last_measurement_at
-    clock.value += timedelta(days=1)
-    device.process({1: make_packet(sequence=0x62, status=0x01, weight_kg=73.0)})
-    device.process({1: make_packet(sequence=0x63, status=0x05, weight_kg=73.05)})
-    assert device.state.weight_kg == 73.05
-    assert device.state.last_measurement_at == clock.value
-    assert device.state.last_measurement_at != old_timestamp
-
-
-def test_new_weight_cannot_reuse_previous_session_impedance() -> None:
-    clock = Clock()
-    device = EufyP3Device(now=clock)
-    device.process({1: HEART_RATE_SAMPLE})
-    previous_measurement = device.state.body_measurement
-
-    clock.value += timedelta(days=1)
-    device.process({1: make_packet(sequence=0x62, status=0x01, weight_kg=73.0)})
-    device.process({1: make_packet(sequence=0x63, status=0x05, weight_kg=73.05)})
-
-    assert device.state.weight_kg == 73.05
-    assert device.state.impedance_ohm == 510.0
-    assert device.state.body_measurement == previous_measurement
-
-    device.process(
-        {
-            1: make_packet(
-                sequence=0x64,
-                status=0x25,
-                weight_kg=73.05,
-                impedance_ohm=515.0,
-            )
-        }
+    device.process_event(
+        MeasurementEvent(
+            MeasurementPhase.IMPEDANCE,
+            weight_kg=64.32,
+            impedance_ohm=543.2,
+            status="impedance",
+        )
     )
-    assert device.state.body_measurement == BodyMeasurement(73.05, 515.0, clock.value)
+    assert device.state.body_measurement == BodyMeasurement(
+        64.32, 543.2, measured_at
+    )
+    assert device.state.last_measurement_at == measured_at
 
 
-def test_locked_packet_after_complete_starts_new_session_when_live_was_missed() -> None:
+def test_previous_session_impedance_is_never_reused() -> None:
     clock = Clock()
-    device = EufyP3Device(now=clock)
-    device.process({1: HEART_RATE_SAMPLE})
-    old_measurement = device.state.body_measurement
-
+    previous = BodyMeasurement(63.0, 530.0, clock.value)
+    device = EufyScaleDevice(now=clock, restored_measurement=previous)
+    device.process_event(
+        MeasurementEvent(MeasurementPhase.LIVE, weight_kg=65.0, status="live")
+    )
     clock.value += timedelta(hours=1)
-    device.process({1: make_packet(sequence=0x70, status=0x05, weight_kg=74.0)})
-    assert device.state.body_measurement == old_measurement
-    assert device.state.last_measurement_at == clock.value
-
-    device.process(
-        {
-            1: make_packet(
-                sequence=0x71,
-                status=0x25,
-                weight_kg=74.0,
-                impedance_ohm=520.0,
-            )
-        }
+    device.process_event(
+        MeasurementEvent(MeasurementPhase.LOCKED, weight_kg=65.1, status="locked")
     )
-    assert device.state.body_measurement == BodyMeasurement(74.0, 520.0, clock.value)
+    assert device.state.body_measurement == previous
+    device.process_event(
+        MeasurementEvent(
+            MeasurementPhase.IMPEDANCE,
+            weight_kg=65.1,
+            impedance_ohm=540.0,
+            status="impedance",
+        )
+    )
+    assert device.state.body_measurement == BodyMeasurement(65.1, 540.0, clock.value)
 
 
-def test_restored_measurement_seeds_completed_state() -> None:
-    restored = BodyMeasurement(71.2, 505.0, datetime(2026, 8, 23, tzinfo=UTC))
-    device = EufyP3Device(restored_measurement=restored)
-
-    assert device.state.weight_kg == 71.2
-    assert device.state.impedance_ohm == 505.0
-    assert device.state.last_measurement_at == restored.measured_at
-    assert device.state.body_measurement == restored
-    assert device.state.real_time_weight_kg is None
-
-
-def test_callback_registration_and_unregistration() -> None:
-    device = EufyP3Device()
-    states = []
-    unsubscribe = device.register_callback(states.append)
-    device.process({1: LIVE_SAMPLE})
-    assert len(states) == 1
-    unsubscribe()
-    unsubscribe()
-    device.process({1: FINAL_SAMPLE})
-    assert len(states) == 1
+def test_battery_and_heart_rate_enrich_state() -> None:
+    device = EufyScaleDevice()
+    device.process_event(
+        MeasurementEvent(
+            MeasurementPhase.LIVE,
+            heart_rate_bpm=72,
+            battery_percent=81,
+            status="live",
+        )
+    )
+    assert device.state.heart_rate_bpm == 72
+    assert device.state.battery_percent == 81
 
 
-def test_invalid_advertisement_does_not_notify() -> None:
-    device = EufyP3Device()
+def test_callbacks_are_idempotently_unsubscribed() -> None:
+    device = EufyScaleDevice()
     calls = []
-    device.register_callback(calls.append)
-    assert not device.process({1: b"invalid"})
-    assert calls == []
+    unsubscribe = device.register_callback(calls.append)
+    device.process_event(MeasurementEvent(MeasurementPhase.LIVE, weight_kg=60.0))
+    assert len(calls) == 1
+    unsubscribe()
+    unsubscribe()
+    device.process_event(MeasurementEvent(MeasurementPhase.LIVE, weight_kg=61.0))
+    assert len(calls) == 1

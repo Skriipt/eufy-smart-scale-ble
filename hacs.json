@@ -1,5 +1,5 @@
 {
-  "name": "Eufy Smart Scale P3 BLE",
+  "name": "Eufy Smart Scale BLE",
   "render_readme": true,
   "homeassistant": "2026.8.0"
 }
