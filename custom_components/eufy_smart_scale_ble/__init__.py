@@ -124,13 +124,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 diagnostics, "gatt_failures", diagnostics.gatt_failures + 1
             ),
         )
-        entry.async_on_unload(
-            lambda: (
-                hass.async_create_task(runtime.gatt.async_stop())
-                if runtime.gatt is not None
-                else None
-            )
-        )
+
+        async def _async_stop_gatt() -> None:
+            if runtime.gatt is not None:
+                await runtime.gatt.async_stop()
+
+        entry.async_on_unload(_async_stop_gatt)
 
     logged_errors: set[tuple[type[BaseException], str]] = set()
 
