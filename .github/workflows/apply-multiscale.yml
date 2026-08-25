@@ -20,15 +20,30 @@ jobs:
           ref: feat/multi-scale-support
           fetch-depth: 0
 
-      - name: Verify and unpack staged workspace
+      - name: Verify and apply staged delta
         run: |
           set -euo pipefail
-          base64 --decode .github/multiscale-payload.b64 > /tmp/multiscale.zip
+          cat .github/multiscale-payload.b64 .github/multiscale-payload.part.* > /tmp/multiscale.b64
+          base64 --decode /tmp/multiscale.b64 > /tmp/multiscale.zip
+          echo "507f7dcd021f54c80c7650d79baaa9b98bea92cc5344a9681582ea2ab3ac48a8  /tmp/multiscale.zip" | sha256sum -c -
           unzip -t /tmp/multiscale.zip >/dev/null
+
+          rm -rf custom_components/eufy_smart_scale_ble
+          cp -a custom_components/eufy_p3_ble custom_components/eufy_smart_scale_ble
           rm -rf custom_components/eufy_p3_ble
-          rm -f .github/workflows/export-source.yml .github/workflows/fetch-upstreams.yml
+
+          rm -f \
+            .github/workflows/export-source.yml \
+            .github/workflows/fetch-upstreams.yml \
+            .github/workflows/apply-multiscale.yml \
+            .github/multiscale-payload.b64 \
+            .github/multiscale-payload.part.*
+
           unzip -oq /tmp/multiscale.zip -d .
-          rm -f .github/multiscale-payload.b64 .github/workflows/apply-multiscale.yml
+
+          test -d custom_components/eufy_smart_scale_ble
+          test ! -e custom_components/eufy_p3_ble
+          test "$(python -c 'import json; print(json.load(open("custom_components/eufy_smart_scale_ble/manifest.json"))["domain"])')" = "eufy_smart_scale_ble"
           python -m compileall -q custom_components tests
 
       - name: Commit final workspace
