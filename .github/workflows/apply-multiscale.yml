@@ -3,7 +3,7 @@ name: Apply multi-scale workspace
 on:
   push:
     branches:
-      - feat/multi-scale-support
+      - fix/materialize-multiscale-0.3.0
     paths:
       - .github/workflows/apply-multiscale.yml
 
@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: feat/multi-scale-support
+          ref: fix/materialize-multiscale-0.3.0
           fetch-depth: 0
 
       - name: Verify and apply staged delta
@@ -52,5 +52,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "feat: add capability-driven multi-scale support"
-          git push origin HEAD:feat/multi-scale-support
+          git commit -m "feat: materialize multi-scale 0.3.0 workspace"
+          git push origin HEAD:fix/materialize-multiscale-0.3.0
