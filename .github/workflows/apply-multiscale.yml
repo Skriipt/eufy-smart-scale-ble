@@ -33,9 +33,6 @@ jobs:
           rm -rf custom_components/eufy_p3_ble
 
           rm -f \
-            .github/workflows/export-source.yml \
-            .github/workflows/fetch-upstreams.yml \
-            .github/workflows/apply-multiscale.yml \
             .github/multiscale-payload.b64 \
             .github/multiscale-payload.part.*
 
@@ -46,11 +43,12 @@ jobs:
           test "$(python -c 'import json; print(json.load(open("custom_components/eufy_smart_scale_ble/manifest.json"))["domain"])')" = "eufy_smart_scale_ble"
           python -m compileall -q custom_components tests
 
-      - name: Commit final workspace
+      - name: Commit final workspace except workflow files
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git restore --source=HEAD --staged --worktree .github/workflows
           git add -A
           git commit -m "feat: materialize multi-scale 0.3.0 workspace"
           git push origin HEAD:fix/materialize-multiscale-0.3.0
