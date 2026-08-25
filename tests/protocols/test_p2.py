@@ -80,9 +80,7 @@ def test_advertisement_rejects_bad_types_shapes_headers_and_weight() -> None:
     assert parse_p2_advertisement("not-bytes", supports_heart_rate=True) is None
     assert parse_p2_advertisement(bytes(18), supports_heart_rate=True) is None
 
-    wrong_header = bytearray(
-        build_p2_advertisement(weight_hundredths=6432, final=True)
-    )
+    wrong_header = bytearray(build_p2_advertisement(weight_hundredths=6432, final=True))
     wrong_header[6] = 0
     assert parse_p2_advertisement(wrong_header, supports_heart_rate=True) is None
 
@@ -123,9 +121,7 @@ def test_gatt_weight_supports_live_and_final_measurements() -> None:
 def test_gatt_weight_rejects_bad_shapes_headers_and_weight() -> None:
     assert parse_p2_gatt_weight(bytes(15)) is None
 
-    wrong_header = bytearray(
-        _build_p2_gatt_weight(weight_hundredths=6432, final=True)
-    )
+    wrong_header = bytearray(_build_p2_gatt_weight(weight_hundredths=6432, final=True))
     wrong_header[0] = 0
     assert parse_p2_gatt_weight(bytes(wrong_header)) is None
 
@@ -133,9 +129,10 @@ def test_gatt_weight_rejects_bad_shapes_headers_and_weight() -> None:
     wrong_kind[2] = 1
     assert parse_p2_gatt_weight(bytes(wrong_kind)) is None
 
-    assert parse_p2_gatt_weight(
-        _build_p2_gatt_weight(weight_hundredths=0, final=True)
-    ) is None
+    assert (
+        parse_p2_gatt_weight(_build_p2_gatt_weight(weight_hundredths=0, final=True))
+        is None
+    )
 
 
 def test_key_validation_rejects_bad_addresses() -> None:
