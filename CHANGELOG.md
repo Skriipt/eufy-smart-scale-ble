@@ -4,6 +4,17 @@ All notable changes to this project are documented in this file.
 
 The project follows semantic versioning. HACS versions are published as GitHub Releases using `v<version>` tags.
 
+## [0.3.2] - 2026-08-25
+
+### Security
+
+- Tightened BLE and GATT advertisement acceptance to the configured device and available model or service identity. BLE radio traffic remains unauthenticated and can still be spoofed by a nearby attacker.
+
+### Fixed
+
+- Bound weight and impedance to the same fresh measurement session before publishing body composition.
+- Bounded GATT connection scheduling and lifetime so repeated advertisements cannot keep connection work active indefinitely.
+
 ## [0.3.1] - 2026-08-25
 
 ### Changed
