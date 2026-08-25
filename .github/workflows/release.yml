@@ -31,7 +31,7 @@ jobs:
 
           print(
               json.loads(
-                  Path("custom_components/eufy_p3_ble/manifest.json").read_text()
+                  Path("custom_components/eufy_smart_scale_ble/manifest.json").read_text()
               )["version"]
           )
           PY
