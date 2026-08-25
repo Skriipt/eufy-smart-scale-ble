@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from custom_components.eufy_p3_ble.body_composition import (
+from custom_components.eufy_smart_scale_ble.body_composition import (
     BodyCompositionProfile,
     BodyMeasurement,
     Sex,
 )
-from custom_components.eufy_p3_ble.composition_manager import BodyCompositionManager
+from custom_components.eufy_smart_scale_ble.composition_manager import (
+    BodyCompositionManager,
+)
 
 MEASUREMENT = BodyMeasurement(
     weight_kg=78.45,

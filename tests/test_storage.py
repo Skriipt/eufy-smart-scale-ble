@@ -1,4 +1,4 @@
-"""Tests for persisted complete P3 body measurements."""
+"""Tests for persisted complete body measurements."""
 
 from __future__ import annotations
 
@@ -7,8 +7,8 @@ from math import inf, nan
 
 import pytest
 
-from custom_components.eufy_p3_ble.body_composition import BodyMeasurement
-from custom_components.eufy_p3_ble.storage import (
+from custom_components.eufy_smart_scale_ble.body_composition import BodyMeasurement
+from custom_components.eufy_smart_scale_ble.storage import (
     deserialize_measurement,
     serialize_measurement,
 )

@@ -5,66 +5,13 @@ on:
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  bootstrap:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/feat/multi-scale-support'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Check out feature branch
-        uses: actions/checkout@v4
-        with:
-          ref: feat/multi-scale-support
-          fetch-depth: 0
-
-      - name: Materialize verified multi-scale workspace
-        run: |
-          set -euo pipefail
-          test -f .github/multiscale-payload.b64 || exit 0
-
-          cat .github/multiscale-payload.b64 .github/multiscale-payload.part.* > /tmp/multiscale.b64
-          base64 --decode /tmp/multiscale.b64 > /tmp/multiscale.zip
-          echo "507f7dcd021f54c80c7650d79baaa9b98bea92cc5344a9681582ea2ab3ac48a8  /tmp/multiscale.zip" | sha256sum -c -
-          unzip -t /tmp/multiscale.zip >/dev/null
-
-          rm -rf custom_components/eufy_smart_scale_ble
-          cp -a custom_components/eufy_p3_ble custom_components/eufy_smart_scale_ble
-          rm -rf custom_components/eufy_p3_ble
-
-          rm -f \
-            .github/workflows/export-source.yml \
-            .github/workflows/fetch-upstreams.yml \
-            .github/workflows/apply-multiscale.yml \
-            .github/multiscale-payload.b64 \
-            .github/multiscale-payload.part.*
-
-          unzip -oq /tmp/multiscale.zip -d .
-
-          test -d custom_components/eufy_smart_scale_ble
-          test ! -e custom_components/eufy_p3_ble
-          test "$(python -c 'import json; print(json.load(open("custom_components/eufy_smart_scale_ble/manifest.json"))["domain"])')" = "eufy_smart_scale_ble"
-          python -m compileall -q custom_components tests
-
-      - name: Commit final workspace
-        run: |
-          set -euo pipefail
-          if test -f .github/multiscale-payload.b64; then
-            echo "Payload unexpectedly remains after materialization."
-            exit 1
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "feat: add capability-driven multi-scale support"
-          git push origin HEAD:feat/multi-scale-support
-
   quality:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -87,10 +34,10 @@ jobs:
       - name: Validate JSON metadata
         run: |
           python -m json.tool hacs.json >/dev/null
-          python -m json.tool custom_components/eufy_p3_ble/manifest.json >/dev/null
-          python -m json.tool custom_components/eufy_p3_ble/strings.json >/dev/null
-          python -m json.tool custom_components/eufy_p3_ble/translations/en.json >/dev/null
-          python -m json.tool custom_components/eufy_p3_ble/translations/de.json >/dev/null
+          python -m json.tool custom_components/eufy_smart_scale_ble/manifest.json >/dev/null
+          python -m json.tool custom_components/eufy_smart_scale_ble/strings.json >/dev/null
+          python -m json.tool custom_components/eufy_smart_scale_ble/translations/en.json >/dev/null
+          python -m json.tool custom_components/eufy_smart_scale_ble/translations/de.json >/dev/null
 
       - name: Validate release metadata
         run: |
@@ -100,7 +47,7 @@ jobs:
           from pathlib import Path
 
           manifest_version = json.loads(
-              Path("custom_components/eufy_p3_ble/manifest.json").read_text()
+              Path("custom_components/eufy_smart_scale_ble/manifest.json").read_text()
           )["version"]
           project_version = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]
           if manifest_version != project_version:
@@ -126,7 +73,7 @@ jobs:
 
       - name: Run tests with branch coverage
         run: |
-          pytest --cov=custom_components/eufy_p3_ble --cov-branch --cov-report=term-missing
+          pytest --cov=custom_components/eufy_smart_scale_ble --cov-branch --cov-report=term-missing
           coverage report \
-            --include='*/body_composition.py,*/composition_manager.py,*/parser.py,*/bluetooth.py,*/device.py' \
+            --include='*/body_composition.py,*/composition_manager.py,*/bluetooth.py,*/device.py,*/protocols/*.py' \
             --fail-under=95

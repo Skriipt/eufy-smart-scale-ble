@@ -1,52 +1,22 @@
-"""Tests for newest T9150 advertisement selection."""
+"""Advertisement parser dispatch tests."""
 
-from __future__ import annotations
-
-from custom_components.eufy_p3_ble.bluetooth import select_newest_frame
-from custom_components.eufy_p3_ble.models import PacketStatus
-from tests.fixtures.t9150_packets import FINAL_SAMPLE, LIVE_SAMPLE, make_packet
+from custom_components.eufy_smart_scale_ble.bluetooth import create_advertisement_parser
+from custom_components.eufy_smart_scale_ble.model_registry import get_model
+from tests.fixtures.t9150_packets import FINAL_SAMPLE, LIVE_SAMPLE
 
 
-def test_selects_newer_final_packet_after_stale_live_packet() -> None:
-    frame = select_newest_frame({53075: LIVE_SAMPLE, 53085: FINAL_SAMPLE})
-    assert frame is not None
-    assert frame.status is PacketStatus.LOCKED
-    assert frame.weight_kg == 72.35
+def test_p3_parser_selects_newest_packet() -> None:
+    model = get_model("eufy T9150")
+    assert model is not None
+    parser = create_advertisement_parser(model)
+    assert parser is not None
+    events = parser.parse({1: LIVE_SAMPLE, 2: FINAL_SAMPLE})
+    assert len(events) == 1
+    assert events[0].status == "locked"
+    assert events[0].weight_kg == 72.35
 
 
-def test_mapping_order_does_not_override_sequence() -> None:
-    frame = select_newest_frame({53085: FINAL_SAMPLE, 53075: LIVE_SAMPLE})
-    assert frame is not None
-    assert frame.status is PacketStatus.LOCKED
-
-
-def test_deduplicates_identical_packets() -> None:
-    frame = select_newest_frame({1: FINAL_SAMPLE, 2: FINAL_SAMPLE})
-    assert frame is not None
-    assert frame.raw == FINAL_SAMPLE
-
-
-def test_equal_sequence_prefers_more_advanced_status() -> None:
-    live = make_packet(sequence=9, status=0x01, weight_kg=72.3)
-    final = make_packet(sequence=9, status=0x05, weight_kg=72.35)
-    frame = select_newest_frame({1: live, 2: final})
-    assert frame is not None
-    assert frame.status is PacketStatus.LOCKED
-
-
-def test_sequence_wraparound() -> None:
-    older = make_packet(sequence=255, status=0x01)
-    newer = make_packet(sequence=0, status=0x05)
-    frame = select_newest_frame({1: older, 2: newer})
-    assert frame is not None
-    assert frame.sequence == 0
-
-
-def test_invalid_entries_are_ignored() -> None:
-    frame = select_newest_frame({1: b"bad", 2: FINAL_SAMPLE})
-    assert frame is not None
-    assert frame.status is PacketStatus.LOCKED
-
-
-def test_no_valid_entries_returns_none() -> None:
-    assert select_newest_frame({1: b"bad", 2: b"also bad"}) is None
+def test_gatt_only_model_has_no_advertisement_parser() -> None:
+    model = get_model("eufy T9120")
+    assert model is not None
+    assert create_advertisement_parser(model) is None

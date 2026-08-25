@@ -4,6 +4,31 @@ All notable changes to this project are documented in this file.
 
 The project follows semantic versioning. HACS versions are published as GitHub Releases using `v<version>` tags.
 
+## [0.3.0] - 2026-08-25
+
+### Added
+
+- Added capability-driven support for all eight Eufy smart-scale model IDs currently handled by Home Assistant EufyLife BLE.
+- Added protocol families for C20 advertisements, C1/P1 advertisements and optional GATT enrichment, A1 GATT measurements, legacy T9140 GATT measurements, and P2/P2 Pro advertisements.
+- Added per-capability support levels: Verified, Upstream Validated, Experimental, and Unsupported.
+- Added short-lived GATT transport with battery support for models that require active connections.
+- Added privacy-safe Home Assistant diagnostics and an explicit memory-only advanced protocol-capture option.
+- Added public support-matrix, protocol-source, and privacy-safe model-verification documentation.
+
+### Changed
+
+- Renamed the integration display name to `Eufy Smart Scale BLE`.
+- Changed the Home Assistant integration domain from `eufy_p3_ble` to `eufy_smart_scale_ble`. Existing 0.2.x installations require a one-time remove/re-add after upgrading.
+- Preserved the hardware-verified P3 behavior behind the generic protocol/session architecture.
+- Body-composition entities are now capability-gated and only operate when a reliable same-session final weight and impedance pair exists.
+- Cross-model body-composition calculations are experimental and disabled by default outside the P3.
+
+### Safety
+
+- P2/P2 Pro opaque composition bytes are not exposed as impedance and are never used for body-composition calculations.
+- Standard diagnostics exclude Bluetooth addresses, raw BLE payloads, personal profile fields, and measurement values.
+- Public protocol fixtures remain synthetic only.
+
 ## [0.2.7] - 2026-08-24
 
 ### Added

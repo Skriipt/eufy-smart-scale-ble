@@ -1,1 +1,1 @@
-"""Tests for Eufy Smart Scale P3 BLE."""
+"""Tests for Eufy Smart Scale BLE."""
