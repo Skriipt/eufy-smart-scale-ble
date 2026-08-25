@@ -1,6 +1,7 @@
 """Repository-level readiness checks for future official HACS submission."""
 
 import json
+import tomllib
 from pathlib import Path
 
 
@@ -12,9 +13,10 @@ def test_repository_has_one_generic_integration() -> None:
     ]
     assert [path.name for path in integrations] == ["eufy_smart_scale_ble"]
     manifest = json.loads((integrations[0] / "manifest.json").read_text())
+    project = tomllib.loads(Path("pyproject.toml").read_text())
     assert manifest["domain"] == "eufy_smart_scale_ble"
     assert manifest["name"] == "Eufy Smart Scale BLE"
-    assert manifest["version"] == "0.3.0"
+    assert manifest["version"] == project["project"]["version"]
     assert {match["local_name"] for match in manifest["bluetooth"]} == {
         "eufy T9120",
         "eufy T9130",
