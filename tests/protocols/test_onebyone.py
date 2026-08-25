@@ -46,20 +46,16 @@ def test_bad_checksum_is_rejected() -> None:
 def test_short_wrong_prefix_invalid_weight_and_error_status_are_rejected() -> None:
     assert parse_onebyone_gatt(bytes(10)) is None
 
-    wrong_prefix = bytearray(
-        build_onebyone_frame(weight_hundredths=6432, final=True)
-    )
+    wrong_prefix = bytearray(build_onebyone_frame(weight_hundredths=6432, final=True))
     wrong_prefix[0] = 0xCE
     wrong_prefix[-1] = xor_checksum(wrong_prefix[:-1])
     assert parse_onebyone_gatt(bytes(wrong_prefix)) is None
-
-    assert parse_onebyone_gatt(
-        build_onebyone_frame(weight_hundredths=0, final=True)
-    ) is None
-
-    error_frame = bytearray(
-        build_onebyone_frame(weight_hundredths=6432, final=True)
+    assert (
+        parse_onebyone_gatt(build_onebyone_frame(weight_hundredths=0, final=True))
+        is None
     )
+
+    error_frame = bytearray(build_onebyone_frame(weight_hundredths=6432, final=True))
     error_frame[9] = 0x02
     error_frame[-1] = xor_checksum(error_frame[:-1])
     assert parse_onebyone_gatt(bytes(error_frame)) is None
@@ -98,11 +94,14 @@ def test_advertisement_parser_ignores_non_frames_and_invalid_frames() -> None:
         final=True,
     )
     parser = OnebyoneAdvertisementParser()
-    assert parser.parse(
-        {
-            1: "not-bytes",
-            2: bytes(17),
-            3: bytes(18),
-            4: invalid_measurement,
-        }
-    ) == ()
+    assert (
+        parser.parse(
+            {
+                1: "not-bytes",
+                2: bytes(17),
+                3: bytes(18),
+                4: invalid_measurement,
+            }
+        )
+        == ()
+    )
