@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 The project follows semantic versioning. HACS versions are published as GitHub Releases using `v<version>` tags.
 
+## [0.3.1] - 2026-08-25
+
+### Changed
+
+- Professionally revised the README to improve clarity, structure, and onboarding guidance.
+
 ## [0.3.0] - 2026-08-25
 
 ### Added
