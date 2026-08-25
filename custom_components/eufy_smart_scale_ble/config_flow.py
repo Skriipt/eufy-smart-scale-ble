@@ -6,7 +6,10 @@ from typing import Any, override
 
 import voluptuous as vol
 from homeassistant.components import bluetooth
-from homeassistant.components.bluetooth import BluetoothServiceInfoBleak, async_discovered_service_info
+from homeassistant.components.bluetooth import (
+    BluetoothServiceInfoBleak,
+    async_discovered_service_info,
+)
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_ADDRESS, CONF_MODEL
 from homeassistant.core import callback
@@ -38,11 +41,14 @@ from .const import (
 from .model_registry import Capability, SupportLevel, get_model
 
 SEX_SELECTOR = SelectSelector(
-    SelectSelectorConfig(options=[value.value for value in Sex], translation_key=CONF_SEX)
+    SelectSelectorConfig(
+        options=[value.value for value in Sex], translation_key=CONF_SEX
+    )
 )
 PROFILE_MODE_SELECTOR = SelectSelector(
     SelectSelectorConfig(
-        options=[value.value for value in ProfileMode], translation_key=CONF_PROFILE_MODE
+        options=[value.value for value in ProfileMode],
+        translation_key=CONF_PROFILE_MODE,
     )
 )
 

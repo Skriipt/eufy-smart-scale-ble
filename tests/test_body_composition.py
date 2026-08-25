@@ -141,7 +141,9 @@ def test_rejects_inputs_outside_validated_ranges(
 
 
 def test_profile_from_mapping_requires_all_profile_fields() -> None:
-    from custom_components.eufy_smart_scale_ble.body_composition import profile_from_mapping
+    from custom_components.eufy_smart_scale_ble.body_composition import (
+        profile_from_mapping,
+    )
 
     assert profile_from_mapping({}) is None
     assert profile_from_mapping({"sex": "male", "height_cm": 180, "age": 35}) is None
@@ -184,7 +186,9 @@ def test_profile_from_mapping_parses_home_assistant_options() -> None:
 def test_profile_from_mapping_rejects_invalid_options(
     options: dict[str, object],
 ) -> None:
-    from custom_components.eufy_smart_scale_ble.body_composition import profile_from_mapping
+    from custom_components.eufy_smart_scale_ble.body_composition import (
+        profile_from_mapping,
+    )
 
     assert profile_from_mapping(options) is None
 

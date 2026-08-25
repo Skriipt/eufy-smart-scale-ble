@@ -52,7 +52,9 @@ class ScaleModelDefinition:
         )
 
 
-def _caps(**values: tuple[SupportLevel, bool] | SupportLevel) -> Mapping[Capability, CapabilityDefinition]:
+def _caps(
+    **values: tuple[SupportLevel, bool] | SupportLevel,
+) -> Mapping[Capability, CapabilityDefinition]:
     result: dict[Capability, CapabilityDefinition] = {}
     for key, value in values.items():
         level, enabled = value if isinstance(value, tuple) else (value, True)
@@ -62,7 +64,11 @@ def _caps(**values: tuple[SupportLevel, bool] | SupportLevel) -> Mapping[Capabil
 
 _MODELS: tuple[ScaleModelDefinition, ...] = (
     ScaleModelDefinition(
-        "eufy T9120", "Eufy Smart Scale A1", "T9120", "onebyone", TransportMode.GATT,
+        "eufy T9120",
+        "Eufy Smart Scale A1",
+        "T9120",
+        "onebyone",
+        TransportMode.GATT,
         _caps(
             live_weight=SupportLevel.UPSTREAM_VALIDATED,
             final_weight=SupportLevel.UPSTREAM_VALIDATED,
@@ -72,7 +78,11 @@ _MODELS: tuple[ScaleModelDefinition, ...] = (
         ),
     ),
     ScaleModelDefinition(
-        "eufy T9130", "Eufy Smart Scale C20", "T9130", "c20", TransportMode.ADVERTISEMENT,
+        "eufy T9130",
+        "Eufy Smart Scale C20",
+        "T9130",
+        "c20",
+        TransportMode.ADVERTISEMENT,
         _caps(
             live_weight=SupportLevel.UPSTREAM_VALIDATED,
             final_weight=SupportLevel.UPSTREAM_VALIDATED,
@@ -82,7 +92,11 @@ _MODELS: tuple[ScaleModelDefinition, ...] = (
         ),
     ),
     ScaleModelDefinition(
-        "eufy T9140", "Eufy Smart Scale", "T9140", "legacy_t9140", TransportMode.GATT,
+        "eufy T9140",
+        "Eufy Smart Scale",
+        "T9140",
+        "legacy_t9140",
+        TransportMode.GATT,
         _caps(
             live_weight=SupportLevel.UPSTREAM_VALIDATED,
             final_weight=SupportLevel.UPSTREAM_VALIDATED,
@@ -92,7 +106,11 @@ _MODELS: tuple[ScaleModelDefinition, ...] = (
         ),
     ),
     ScaleModelDefinition(
-        "eufy T9146", "Eufy Smart Scale C1", "T9146", "onebyone", TransportMode.ADVERTISEMENT_WITH_OPTIONAL_GATT,
+        "eufy T9146",
+        "Eufy Smart Scale C1",
+        "T9146",
+        "onebyone",
+        TransportMode.ADVERTISEMENT_WITH_OPTIONAL_GATT,
         _caps(
             live_weight=SupportLevel.UPSTREAM_VALIDATED,
             final_weight=SupportLevel.UPSTREAM_VALIDATED,
@@ -102,7 +120,11 @@ _MODELS: tuple[ScaleModelDefinition, ...] = (
         ),
     ),
     ScaleModelDefinition(
-        "eufy T9147", "Eufy Smart Scale P1", "T9147", "onebyone", TransportMode.ADVERTISEMENT_WITH_OPTIONAL_GATT,
+        "eufy T9147",
+        "Eufy Smart Scale P1",
+        "T9147",
+        "onebyone",
+        TransportMode.ADVERTISEMENT_WITH_OPTIONAL_GATT,
         _caps(
             live_weight=SupportLevel.UPSTREAM_VALIDATED,
             final_weight=SupportLevel.UPSTREAM_VALIDATED,
@@ -112,7 +134,11 @@ _MODELS: tuple[ScaleModelDefinition, ...] = (
         ),
     ),
     ScaleModelDefinition(
-        "eufy T9148", "Eufy Smart Scale P2", "T9148", "p2", TransportMode.ADVERTISEMENT,
+        "eufy T9148",
+        "Eufy Smart Scale P2",
+        "T9148",
+        "p2",
+        TransportMode.ADVERTISEMENT,
         _caps(
             live_weight=SupportLevel.UPSTREAM_VALIDATED,
             final_weight=SupportLevel.UPSTREAM_VALIDATED,
@@ -121,7 +147,11 @@ _MODELS: tuple[ScaleModelDefinition, ...] = (
         ),
     ),
     ScaleModelDefinition(
-        "eufy T9149", "Eufy Smart Scale P2 Pro", "T9149", "p2", TransportMode.ADVERTISEMENT,
+        "eufy T9149",
+        "Eufy Smart Scale P2 Pro",
+        "T9149",
+        "p2",
+        TransportMode.ADVERTISEMENT,
         _caps(
             live_weight=SupportLevel.UPSTREAM_VALIDATED,
             final_weight=SupportLevel.UPSTREAM_VALIDATED,
@@ -131,7 +161,11 @@ _MODELS: tuple[ScaleModelDefinition, ...] = (
         ),
     ),
     ScaleModelDefinition(
-        "eufy T9150", "Eufy Smart Scale P3", "T9150", "p3", TransportMode.ADVERTISEMENT,
+        "eufy T9150",
+        "Eufy Smart Scale P3",
+        "T9150",
+        "p3",
+        TransportMode.ADVERTISEMENT,
         _caps(
             live_weight=SupportLevel.VERIFIED,
             final_weight=SupportLevel.VERIFIED,
@@ -159,7 +193,10 @@ def capability_enabled(
         return False
     if definition.enabled_by_default:
         return True
-    if capability in {Capability.IMPEDANCE, Capability.BATTERY} and model.model_name in {"T9146", "T9147"}:
+    if capability in {
+        Capability.IMPEDANCE,
+        Capability.BATTERY,
+    } and model.model_name in {"T9146", "T9147"}:
         return bool(options.get("extended_metrics"))
     if capability is Capability.IMPEDANCE and model.model_name == "T9140":
         return bool(options.get("experimental_impedance"))

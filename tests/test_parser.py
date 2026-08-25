@@ -75,9 +75,9 @@ def test_unknown_status_is_rejected() -> None:
 
 @pytest.mark.parametrize("weight", [0.0, -1.0, 200.01, 300.0])
 def test_invalid_weight_is_rejected(weight: float) -> None:
-    assert parse_p3_packet(
-        make_packet(sequence=1, status=0x01, weight_kg=weight)
-    ) is None
+    assert (
+        parse_p3_packet(make_packet(sequence=1, status=0x01, weight_kg=weight)) is None
+    )
 
 
 @pytest.mark.parametrize(

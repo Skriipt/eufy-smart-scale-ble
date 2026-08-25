@@ -47,9 +47,7 @@ def test_same_session_weight_and_impedance_create_body_measurement() -> None:
             status="impedance",
         )
     )
-    assert device.state.body_measurement == BodyMeasurement(
-        64.32, 543.2, measured_at
-    )
+    assert device.state.body_measurement == BodyMeasurement(64.32, 543.2, measured_at)
     assert device.state.last_measurement_at == measured_at
 
 

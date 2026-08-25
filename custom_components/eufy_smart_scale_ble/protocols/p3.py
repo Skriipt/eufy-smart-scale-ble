@@ -5,7 +5,13 @@ from __future__ import annotations
 from collections.abc import Mapping
 from enum import IntEnum
 
-from .base import MeasurementEvent, MeasurementPhase, valid_heart_rate, valid_impedance, valid_weight
+from .base import (
+    MeasurementEvent,
+    MeasurementPhase,
+    valid_heart_rate,
+    valid_impedance,
+    valid_weight,
+)
 
 
 class P3Status(IntEnum):
@@ -87,7 +93,9 @@ class P3AdvertisementParser:
         self._sequence: int | None = None
         self._status: P3Status | None = None
 
-    def parse(self, manufacturer_data: Mapping[int, object]) -> tuple[MeasurementEvent, ...]:
+    def parse(
+        self, manufacturer_data: Mapping[int, object]
+    ) -> tuple[MeasurementEvent, ...]:
         selected: tuple[P3Status, MeasurementEvent] | None = None
         for raw in manufacturer_data.values():
             parsed = parse_p3_packet(raw)
@@ -110,7 +118,11 @@ class P3AdvertisementParser:
         if self._sequence is not None:
             if is_sequence_newer(event.sequence, self._sequence):
                 pass
-            elif event.sequence == self._sequence and self._status is not None and status.rank > self._status.rank:
+            elif (
+                event.sequence == self._sequence
+                and self._status is not None
+                and status.rank > self._status.rank
+            ):
                 pass
             else:
                 return ()

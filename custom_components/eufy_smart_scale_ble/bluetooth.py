@@ -14,22 +14,30 @@ from .protocols.p3 import P3AdvertisementParser
 
 
 class AdvertisementParser(Protocol):
-    def parse(self, manufacturer_data: Mapping[int, object]) -> tuple[MeasurementEvent, ...]: ...
+    def parse(
+        self, manufacturer_data: Mapping[int, object]
+    ) -> tuple[MeasurementEvent, ...]: ...
 
 
 class P2AdvertisementParser:
     def __init__(self, *, supports_heart_rate: bool) -> None:
         self._supports_heart_rate = supports_heart_rate
 
-    def parse(self, manufacturer_data: Mapping[int, object]) -> tuple[MeasurementEvent, ...]:
+    def parse(
+        self, manufacturer_data: Mapping[int, object]
+    ) -> tuple[MeasurementEvent, ...]:
         for raw in manufacturer_data.values():
-            event = parse_p2_advertisement(raw, supports_heart_rate=self._supports_heart_rate)
+            event = parse_p2_advertisement(
+                raw, supports_heart_rate=self._supports_heart_rate
+            )
             if event is not None:
                 return (event,)
         return ()
 
 
-def create_advertisement_parser(model: ScaleModelDefinition) -> AdvertisementParser | None:
+def create_advertisement_parser(
+    model: ScaleModelDefinition,
+) -> AdvertisementParser | None:
     if model.protocol_family == "p3":
         return P3AdvertisementParser()
     if model.protocol_family == "c20":

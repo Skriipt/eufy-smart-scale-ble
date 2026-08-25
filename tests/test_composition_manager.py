@@ -9,7 +9,9 @@ from custom_components.eufy_smart_scale_ble.body_composition import (
     BodyMeasurement,
     Sex,
 )
-from custom_components.eufy_smart_scale_ble.composition_manager import BodyCompositionManager
+from custom_components.eufy_smart_scale_ble.composition_manager import (
+    BodyCompositionManager,
+)
 
 MEASUREMENT = BodyMeasurement(
     weight_kg=78.45,

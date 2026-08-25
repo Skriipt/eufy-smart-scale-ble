@@ -26,7 +26,9 @@ def split_notifications(data: bytes) -> tuple[bytes, ...]:
     return (data,)
 
 
-def parse_t9140_frame(data: bytes, *, allow_impedance: bool = False) -> MeasurementEvent | None:
+def parse_t9140_frame(
+    data: bytes, *, allow_impedance: bool = False
+) -> MeasurementEvent | None:
     if len(data) < 7:
         return None
     if data[6] in (0xCA, 0xCE):

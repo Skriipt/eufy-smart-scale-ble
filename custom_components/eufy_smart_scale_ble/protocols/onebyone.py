@@ -27,7 +27,7 @@ def parse_cf_frame(data: bytes, *, include_impedance: bool) -> MeasurementEvent 
     final = data[9] == 0x00
     impedance = None
     if include_impedance and data[9] != 0x01:
-        candidate = (((data[2] << 8) | data[1]) * 0.1)
+        candidate = ((data[2] << 8) | data[1]) * 0.1
         if valid_impedance(candidate):
             impedance = candidate
     return MeasurementEvent(
@@ -39,7 +39,9 @@ def parse_cf_frame(data: bytes, *, include_impedance: bool) -> MeasurementEvent 
 
 
 class OnebyoneAdvertisementParser:
-    def parse(self, manufacturer_data: Mapping[int, object]) -> tuple[MeasurementEvent, ...]:
+    def parse(
+        self, manufacturer_data: Mapping[int, object]
+    ) -> tuple[MeasurementEvent, ...]:
         for raw in manufacturer_data.values():
             if not isinstance(raw, (bytes, bytearray, memoryview)):
                 continue

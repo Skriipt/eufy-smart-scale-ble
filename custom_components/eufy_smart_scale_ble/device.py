@@ -92,7 +92,9 @@ class EufyScaleDevice:
                     else previous.battery_percent
                 ),
                 packet_status=event.status or event.phase.value,
-                sequence=event.sequence if event.sequence is not None else previous.sequence,
+                sequence=event.sequence
+                if event.sequence is not None
+                else previous.sequence,
             )
         else:
             if self._should_begin_without_live(event, previous):
@@ -105,7 +107,11 @@ class EufyScaleDevice:
             if event.impedance_ohm is not None:
                 self._session_impedance = event.impedance_ohm
             body_measurement = previous.body_measurement
-            if self._session_weight is not None and self._session_impedance is not None and self._session_time is not None:
+            if (
+                self._session_weight is not None
+                and self._session_impedance is not None
+                and self._session_time is not None
+            ):
                 body_measurement = BodyMeasurement(
                     self._session_weight,
                     self._session_impedance,
@@ -119,7 +125,9 @@ class EufyScaleDevice:
                     else previous.real_time_weight_kg
                 ),
                 weight_kg=(
-                    event.weight_kg if event.weight_kg is not None else previous.weight_kg
+                    event.weight_kg
+                    if event.weight_kg is not None
+                    else previous.weight_kg
                 ),
                 impedance_ohm=(
                     event.impedance_ohm
@@ -138,7 +146,9 @@ class EufyScaleDevice:
                 ),
                 last_measurement_at=self._session_time or previous.last_measurement_at,
                 packet_status=event.status or event.phase.value,
-                sequence=event.sequence if event.sequence is not None else previous.sequence,
+                sequence=event.sequence
+                if event.sequence is not None
+                else previous.sequence,
                 body_measurement=body_measurement,
             )
         if updated == previous:
@@ -148,7 +158,14 @@ class EufyScaleDevice:
             callback(updated)
         return True
 
-    def _should_begin_without_live(self, event: MeasurementEvent, previous: ScaleState) -> bool:
+    def _should_begin_without_live(
+        self, event: MeasurementEvent, previous: ScaleState
+    ) -> bool:
         if not self._session_finalized or event.phase is not MeasurementPhase.LOCKED:
             return False
-        return previous.packet_status not in {MeasurementPhase.LIVE.value, MeasurementPhase.LOCKED.value, "live", "locked"}
+        return previous.packet_status not in {
+            MeasurementPhase.LIVE.value,
+            MeasurementPhase.LOCKED.value,
+            "live",
+            "locked",
+        }

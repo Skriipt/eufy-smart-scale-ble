@@ -10,7 +10,11 @@ from typing import Any
 from .model_registry import ScaleModelDefinition
 from .protocol_capture import ProtocolCapture
 from .protocols.base import MeasurementEvent, MeasurementPhase
-from .protocols.legacy_t9140 import NOTIFY_CANDIDATES, parse_t9140_frame, split_notifications
+from .protocols.legacy_t9140 import (
+    NOTIFY_CANDIDATES,
+    parse_t9140_frame,
+    split_notifications,
+)
 from .protocols.onebyone import parse_onebyone_gatt
 
 _LOGGER = logging.getLogger(__name__)
@@ -59,10 +63,15 @@ class EufyGattSession:
             except Exception as err:
                 if self._on_failure is not None:
                     self._on_failure()
-                _LOGGER.debug("GATT connection failed for %s: %s", self._model.model_name, err)
+                _LOGGER.debug(
+                    "GATT connection failed for %s: %s", self._model.model_name, err
+                )
 
     async def _async_connect(self) -> None:
-        from bleak_retry_connector import BleakClientWithServiceCache, establish_connection
+        from bleak_retry_connector import (
+            BleakClientWithServiceCache,
+            establish_connection,
+        )
         from homeassistant.components import bluetooth as ha_bluetooth
 
         ble_device = ha_bluetooth.async_ble_device_from_address(
@@ -91,7 +100,13 @@ class EufyGattSession:
             try:
                 value = await client.read_gatt_char(battery)
                 if len(value) == 1 and 0 <= value[0] <= 100:
-                    self._on_event(MeasurementEvent(phase=MeasurementPhase.LIVE, battery_percent=value[0], status="battery"))
+                    self._on_event(
+                        MeasurementEvent(
+                            phase=MeasurementPhase.LIVE,
+                            battery_percent=value[0],
+                            status="battery",
+                        )
+                    )
             except Exception:
                 pass
         if self._on_connect is not None:

@@ -6,7 +6,9 @@ from custom_components.eufy_smart_scale_ble.body_composition import (
     BodyCompositionProfile,
     Sex,
 )
-from custom_components.eufy_smart_scale_ble.composition_manager import BodyCompositionManager
+from custom_components.eufy_smart_scale_ble.composition_manager import (
+    BodyCompositionManager,
+)
 from custom_components.eufy_smart_scale_ble.device import EufyScaleDevice
 from custom_components.eufy_smart_scale_ble.diagnostics import RuntimeDiagnostics
 from custom_components.eufy_smart_scale_ble.model_registry import SUPPORTED_MODELS
@@ -28,9 +30,11 @@ def runtime(model_id: str, profile: BodyCompositionProfile | None = None):
     device = EufyScaleDevice(now=lambda: datetime(2026, 8, 24, tzinfo=UTC))
     composition = BodyCompositionManager(profile=profile)
     device.register_callback(
-        lambda state: composition.update_measurement(state.body_measurement)
-        if state.body_measurement is not None
-        else None
+        lambda state: (
+            composition.update_measurement(state.body_measurement)
+            if state.body_measurement is not None
+            else None
+        )
     )
     return EufyScaleRuntimeData(
         address=ADDRESS,

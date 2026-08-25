@@ -276,7 +276,6 @@ def _device_info(data: EufyScaleRuntimeData) -> DeviceInfo:
     )
 
 
-
 class _EufyScaleEntityMixin:
     """Shared callback and device metadata for raw scale entities."""
 
@@ -458,7 +457,9 @@ class EufyScaleCalculatedSensor(SensorEntity):
             "algorithm": ALGORITHM_ID,
             "algorithm_status": ALGORITHM_STATUS,
             "algorithm_basis_model": "T9150",
-            "model_support": self._data.model.capability(Capability.BODY_COMPOSITION).level.value,
+            "model_support": self._data.model.capability(
+                Capability.BODY_COMPOSITION
+            ).level.value,
             "input_weight_kg": (
                 measurement.weight_kg if measurement is not None else None
             ),
@@ -501,14 +502,32 @@ async def async_setup_entry(
     entities: list[SensorEntity] = []
 
     if capability_enabled(data.model, Capability.FINAL_WEIGHT, options):
-        entities.append(EufyScaleRestoredSensor(data, WEIGHT_DESCRIPTION, lambda state: state.weight_kg))
-        entities.append(EufyScaleRestoredSensor(data, LAST_MEASUREMENT_DESCRIPTION, lambda state: state.last_measurement_at))
+        entities.append(
+            EufyScaleRestoredSensor(
+                data, WEIGHT_DESCRIPTION, lambda state: state.weight_kg
+            )
+        )
+        entities.append(
+            EufyScaleRestoredSensor(
+                data,
+                LAST_MEASUREMENT_DESCRIPTION,
+                lambda state: state.last_measurement_at,
+            )
+        )
     if capability_enabled(data.model, Capability.LIVE_WEIGHT, options):
         entities.append(EufyScaleRealTimeWeightSensor(data))
     if capability_enabled(data.model, Capability.IMPEDANCE, options):
-        entities.append(EufyScaleRestoredSensor(data, IMPEDANCE_DESCRIPTION, lambda state: state.impedance_ohm))
+        entities.append(
+            EufyScaleRestoredSensor(
+                data, IMPEDANCE_DESCRIPTION, lambda state: state.impedance_ohm
+            )
+        )
     if capability_enabled(data.model, Capability.HEART_RATE, options):
-        entities.append(EufyScaleRestoredSensor(data, HEART_RATE_DESCRIPTION, lambda state: state.heart_rate_bpm))
+        entities.append(
+            EufyScaleRestoredSensor(
+                data, HEART_RATE_DESCRIPTION, lambda state: state.heart_rate_bpm
+            )
+        )
     if capability_enabled(data.model, Capability.BATTERY, options):
         entities.append(EufyScaleBatterySensor(data))
 

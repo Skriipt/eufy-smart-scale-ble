@@ -36,7 +36,10 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up one Eufy scale."""
     from homeassistant.components import bluetooth as ha_bluetooth
-    from homeassistant.components.bluetooth.match import ADDRESS, BluetoothCallbackMatcher
+    from homeassistant.components.bluetooth.match import (
+        ADDRESS,
+        BluetoothCallbackMatcher,
+    )
     from homeassistant.const import CONF_MODEL, Platform
     from homeassistant.util import dt as dt_util
 
@@ -52,7 +55,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         try:
             restored_measurement = await async_load_measurement(hass, entry.entry_id)
         except Exception as err:
-            _LOGGER.warning("Unable to restore the latest Eufy scale measurement: %s", err)
+            _LOGGER.warning(
+                "Unable to restore the latest Eufy scale measurement: %s", err
+            )
 
     composition_enabled = capability_enabled(
         model, Capability.BODY_COMPOSITION, entry.options
@@ -81,7 +86,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         try:
             await async_save_measurement(hass, entry.entry_id, measurement)
         except Exception as err:
-            _LOGGER.warning("Unable to store the latest Eufy scale measurement: %s", err)
+            _LOGGER.warning(
+                "Unable to store the latest Eufy scale measurement: %s", err
+            )
 
     def _update_composition(state: ScaleState) -> None:
         measurement = state.body_measurement
@@ -118,9 +125,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ),
         )
         entry.async_on_unload(
-            lambda: hass.async_create_task(runtime.gatt.async_stop())
-            if runtime.gatt is not None
-            else None
+            lambda: (
+                hass.async_create_task(runtime.gatt.async_stop())
+                if runtime.gatt is not None
+                else None
+            )
         )
 
     logged_errors: set[tuple[type[BaseException], str]] = set()

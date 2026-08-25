@@ -14,7 +14,9 @@ from .base import MeasurementEvent, MeasurementPhase, valid_heart_rate, valid_we
 IV = b"0000000000000000"
 
 
-def parse_p2_advertisement(raw: object, *, supports_heart_rate: bool) -> MeasurementEvent | None:
+def parse_p2_advertisement(
+    raw: object, *, supports_heart_rate: bool
+) -> MeasurementEvent | None:
     if not isinstance(raw, (bytes, bytearray, memoryview)):
         return None
     data = bytes(raw)
@@ -86,7 +88,9 @@ def segment(hex_payload: str, prefix: int) -> tuple[bytes, ...]:
     chunks = [hex_payload[i : i + 30] for i in range(0, len(hex_payload), 30)]
     result: list[bytes] = []
     for index, chunk in enumerate(chunks):
-        body = bytes.fromhex(f"{prefix:02x}{len(chunks):02x}{index:02x}{total_bytes:02x}{chunk}")
+        body = bytes.fromhex(
+            f"{prefix:02x}{len(chunks):02x}{index:02x}{total_bytes:02x}{chunk}"
+        )
         result.append(body + bytes([xor_checksum(body)]))
     return tuple(result)
 
@@ -131,7 +135,9 @@ class P2AuthSession:
     def c2(self) -> tuple[bytes, ...]:
         if self.device_uuid is None:
             raise RuntimeError("C1 must complete before C2")
-        return segment(_encrypt(f"{self.client_uuid}_{self.device_uuid}", self.key), 0xC2)
+        return segment(
+            _encrypt(f"{self.client_uuid}_{self.device_uuid}", self.key), 0xC2
+        )
 
     def handle_c3(self, data: bytes) -> bool:
         if len(data) < 5 or data[0] != 0xC3:

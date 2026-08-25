@@ -8,7 +8,9 @@ from types import SimpleNamespace
 from custom_components.eufy_smart_scale_ble.gatt import EufyGattSession
 from custom_components.eufy_smart_scale_ble.model_registry import SUPPORTED_MODELS
 from custom_components.eufy_smart_scale_ble.protocol_capture import ProtocolCapture
-from custom_components.eufy_smart_scale_ble.protocols.legacy_t9140 import NOTIFY_CANDIDATES
+from custom_components.eufy_smart_scale_ble.protocols.legacy_t9140 import (
+    NOTIFY_CANDIDATES,
+)
 
 
 class FakeServices:
@@ -31,12 +33,18 @@ def session(model_id: str) -> EufyGattSession:
 
 def test_resolves_onebyone_notify_characteristic() -> None:
     characteristic = "0000fff4-0000-1000-8000-00805f9b34fb"
-    assert session("eufy T9120")._resolve_notify(FakeServices({characteristic})) == characteristic
+    assert (
+        session("eufy T9120")._resolve_notify(FakeServices({characteristic}))
+        == characteristic
+    )
 
 
 def test_resolves_first_available_t9140_notify_characteristic() -> None:
     available = {NOTIFY_CANDIDATES[1]}
-    assert session("eufy T9140")._resolve_notify(FakeServices(available)) == NOTIFY_CANDIDATES[1]
+    assert (
+        session("eufy T9140")._resolve_notify(FakeServices(available))
+        == NOTIFY_CANDIDATES[1]
+    )
 
 
 async def test_concurrent_connect_requests_collapse_to_one_attempt() -> None:

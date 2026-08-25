@@ -23,9 +23,7 @@ async def test_diagnostics_contain_protocol_metadata_not_personal_values() -> No
             status="complete",
         )
     )
-    runtime = SimpleNamespace(
-        model=SUPPORTED_MODELS["eufy T9150"], diagnostics=stats
-    )
+    runtime = SimpleNamespace(model=SUPPORTED_MODELS["eufy T9150"], diagnostics=stats)
     result = await async_get_config_entry_diagnostics(
         None, SimpleNamespace(runtime_data=runtime)
     )

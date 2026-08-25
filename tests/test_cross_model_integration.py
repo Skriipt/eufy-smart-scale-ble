@@ -7,7 +7,9 @@ from datetime import UTC, datetime
 from custom_components.eufy_smart_scale_ble.body_composition import BodyMeasurement
 from custom_components.eufy_smart_scale_ble.device import EufyScaleDevice
 from custom_components.eufy_smart_scale_ble.protocols.c20 import C20AdvertisementParser
-from custom_components.eufy_smart_scale_ble.protocols.legacy_t9140 import parse_t9140_frame
+from custom_components.eufy_smart_scale_ble.protocols.legacy_t9140 import (
+    parse_t9140_frame,
+)
 from custom_components.eufy_smart_scale_ble.protocols.onebyone import (
     OnebyoneAdvertisementParser,
     parse_onebyone_gatt,

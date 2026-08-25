@@ -26,7 +26,12 @@ from tests.common import MockConfigEntry
 from tests.fixtures.t9150_packets import FINAL_SAMPLE, LIVE_SAMPLE
 
 ADDRESS = ":".join(("02", "00", "00", "00", "00", "01"))
-PROFILE = {CONF_SEX: "male", CONF_HEIGHT_CM: 180, CONF_AGE: 35, CONF_PROFILE_MODE: "normal"}
+PROFILE = {
+    CONF_SEX: "male",
+    CONF_HEIGHT_CM: 180,
+    CONF_AGE: 35,
+    CONF_PROFILE_MODE: "normal",
+}
 RESTORED = BodyMeasurement(71.8, 505.0, datetime(2026, 8, 23, 8, 0, tzinfo=UTC))
 
 
@@ -58,9 +63,7 @@ async def test_p3_setup_processes_cached_advertisement(hass: HomeAssistant) -> N
         patch.object(
             bluetooth,
             "async_last_service_info",
-            return_value=service_info(
-                "eufy T9150", {1: LIVE_SAMPLE, 2: FINAL_SAMPLE}
-            ),
+            return_value=service_info("eufy T9150", {1: LIVE_SAMPLE, 2: FINAL_SAMPLE}),
         ),
         patch.object(bluetooth, "async_register_callback", return_value=lambda: None),
         patch.object(
@@ -123,7 +126,9 @@ async def test_a1_creates_gatt_session_but_does_not_connect_while_sleeping(
 
 
 async def test_options_update_reloads_entry(hass: HomeAssistant) -> None:
-    entry = MockConfigEntry(domain=DOMAIN, unique_id=ADDRESS, data={CONF_MODEL: "eufy T9150"})
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id=ADDRESS, data={CONF_MODEL: "eufy T9150"}
+    )
     reload_entry = AsyncMock()
     with patch.object(hass.config_entries, "async_reload", new=reload_entry):
         await _async_reload_entry(hass, entry)
@@ -131,7 +136,9 @@ async def test_options_update_reloads_entry(hass: HomeAssistant) -> None:
 
 
 async def test_unload_forwards_to_sensor_platform(hass: HomeAssistant) -> None:
-    entry = MockConfigEntry(domain=DOMAIN, unique_id=ADDRESS, data={CONF_MODEL: "eufy T9150"})
+    entry = MockConfigEntry(
+        domain=DOMAIN, unique_id=ADDRESS, data={CONF_MODEL: "eufy T9150"}
+    )
     unload = AsyncMock(return_value=True)
     with patch.object(hass.config_entries, "async_unload_platforms", unload):
         assert await async_unload_entry(hass, entry)
