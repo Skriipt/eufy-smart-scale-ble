@@ -1,0 +1,41 @@
+name: Apply multi-scale workspace
+
+on:
+  push:
+    branches:
+      - feat/multi-scale-support
+    paths:
+      - .github/workflows/apply-multiscale.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/multi-scale-support
+          fetch-depth: 0
+
+      - name: Verify and unpack staged workspace
+        run: |
+          set -euo pipefail
+          base64 --decode .github/multiscale-payload.b64 > /tmp/multiscale.zip
+          unzip -t /tmp/multiscale.zip >/dev/null
+          rm -rf custom_components/eufy_p3_ble
+          rm -f .github/workflows/export-source.yml .github/workflows/fetch-upstreams.yml
+          unzip -oq /tmp/multiscale.zip -d .
+          rm -f .github/multiscale-payload.b64 .github/workflows/apply-multiscale.yml
+          python -m compileall -q custom_components tests
+
+      - name: Commit final workspace
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: add capability-driven multi-scale support"
+          git push origin HEAD:feat/multi-scale-support
