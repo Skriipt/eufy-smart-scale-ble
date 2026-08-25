@@ -116,9 +116,7 @@ class P3AdvertisementParser:
         status, event = selected
         assert event.sequence is not None
         if self._sequence is not None:
-            if is_sequence_newer(event.sequence, self._sequence):
-                pass
-            elif (
+            if is_sequence_newer(event.sequence, self._sequence) or (
                 event.sequence == self._sequence
                 and self._status is not None
                 and status.rank > self._status.rank

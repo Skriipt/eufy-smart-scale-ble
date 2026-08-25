@@ -1,8 +1,8 @@
 from custom_components.eufy_smart_scale_ble.model_registry import (
+    SUPPORTED_MODELS,
     Capability,
     SupportLevel,
     TransportMode,
-    SUPPORTED_MODELS,
     capability_enabled,
 )
 

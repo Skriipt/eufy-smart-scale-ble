@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from .base import MeasurementEvent, MeasurementPhase, valid_impedance, valid_weight
 
-
 NOTIFY_CANDIDATES = (
     "4143f7b2-5300-4900-4700-414943415245",
     "4143f6b2-5300-4900-4700-414943415245",
