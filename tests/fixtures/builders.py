@@ -17,7 +17,7 @@ def build_p3_packet(
 ) -> bytes:
     """Build a protocol-shaped synthetic T9150 manufacturer payload."""
     data = bytearray(23)
-    data[6] = sequence & 0xFF
+    data[6:10] = (sequence & 0xFFFFFFFF).to_bytes(4, "little")
     data[10] = status & 0xFF
     data[12:14] = (weight_hundredths & 0xFFFF).to_bytes(2, "little")
     if impedance_tenths:
