@@ -82,7 +82,13 @@ def test_invalid_weight_is_rejected(weight: float) -> None:
 
 @pytest.mark.parametrize(
     ("candidate", "reference", "expected"),
-    [(1, 0, True), (0, 255, True), (255, 0, False), (0, 0, False), (128, 0, False)],
+    [
+        (1, 0, True),
+        (0, 0xFFFFFFFF, True),
+        (0xFFFFFFFF, 0, False),
+        (0, 0, False),
+        (0x80000000, 0, False),
+    ],
 )
 def test_sequence_comparison(candidate: int, reference: int, expected: bool) -> None:
     assert is_sequence_newer(candidate, reference) is expected
@@ -93,3 +99,15 @@ def test_parser_rejects_duplicate_and_stale_packets() -> None:
     assert parser.parse({1: FINAL_SAMPLE})
     assert parser.parse({1: FINAL_SAMPLE}) == ()
     assert parser.parse({1: LIVE_SAMPLE}) == ()
+
+
+def test_parser_accepts_later_weigh_in_when_low_byte_looks_stale() -> None:
+    parser = P3AdvertisementParser()
+    earlier = make_packet(sequence=0x6A8C37F2, status=0x25, weight_kg=83.2)
+    later = make_packet(sequence=0x6A8C3890, status=0x01, weight_kg=83.7)
+
+    earlier_events = parser.parse({1: earlier})
+    later_events = parser.parse({1: later})
+
+    assert earlier_events[0].sequence == 0x6A8C37F2
+    assert later_events[0].sequence == 0x6A8C3890
