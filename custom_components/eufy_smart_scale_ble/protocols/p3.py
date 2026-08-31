@@ -13,6 +13,9 @@ from .base import (
     valid_weight,
 )
 
+_SEQUENCE_MASK = 0xFFFFFFFF
+_SEQUENCE_HALF_RANGE = 0x80000000
+
 
 class P3Status(IntEnum):
     LIVE = 0x01
@@ -51,8 +54,8 @@ class P3Status(IntEnum):
 
 
 def is_sequence_newer(candidate: int, reference: int) -> bool:
-    delta = (candidate - reference) & 0xFF
-    return 0 < delta < 128
+    delta = (candidate - reference) & _SEQUENCE_MASK
+    return 0 < delta < _SEQUENCE_HALF_RANGE
 
 
 def parse_p3_packet(raw: object) -> tuple[P3Status, MeasurementEvent] | None:
@@ -81,7 +84,7 @@ def parse_p3_packet(raw: object) -> tuple[P3Status, MeasurementEvent] | None:
         weight_kg=weight,
         impedance_ohm=impedance,
         heart_rate_bpm=heart_rate,
-        sequence=data[6],
+        sequence=int.from_bytes(data[6:10], "little"),
         status=status.slug,
     )
 
