@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 The project follows semantic versioning. HACS versions are published as GitHub Releases using `v<version>` tags.
 
+## [0.3.3] - 2026-08-31
+
+### Fixed
+
+- Read the P3's complete four-byte monotonic packet counter so later weigh-ins are not discarded when the low byte alone appears older.
+
 ## [0.3.2] - 2026-08-25
 
 ### Security
