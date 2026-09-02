@@ -7,6 +7,7 @@ from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers.service_info.bluetooth import BluetoothServiceInfo
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.eufy_smart_scale_ble.const import (
     CONF_AGE,
@@ -17,7 +18,6 @@ from custom_components.eufy_smart_scale_ble.const import (
     DOMAIN,
 )
 from custom_components.eufy_smart_scale_ble.model_registry import SUPPORTED_MODELS
-from tests.common import MockConfigEntry
 
 ADDRESS = ":".join(("02", "00", "00", "00", "00", "01"))
 

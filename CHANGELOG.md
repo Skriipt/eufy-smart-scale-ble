@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 The project follows semantic versioning. HACS versions are published as GitHub Releases using `v<version>` tags.
 
+## [0.3.4] - 2026-09-02
+
+### Changed
+
+- Removed the completed multi-scale implementation plan and unused internal test scaffolding.
+- Simplified repository consistency checks without changing runtime behavior.
+
 ## [0.3.3] - 2026-08-31
 
 ### Fixed

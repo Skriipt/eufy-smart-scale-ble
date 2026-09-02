@@ -34,15 +34,6 @@ ValueType = float | int | str | datetime | None
 ValueGetter = Callable[[ScaleState], ValueType]
 CalculatedValueGetter = Callable[[BodyCompositionResult], float | int | str]
 
-STATUS_OPTIONS: Final = [
-    "live",
-    "locked",
-    "post_lock",
-    "impedance",
-    "body_composition",
-    "body_composition_late",
-    "complete",
-]
 BODY_TYPE_OPTIONS: Final = [value.value for value in BodyType]
 
 WEIGHT_DESCRIPTION = SensorEntityDescription(
@@ -94,15 +85,6 @@ PACKET_STATUS_DESCRIPTION = SensorEntityDescription(
     translation_key="packet_status",
     entity_category=EntityCategory.DIAGNOSTIC,
     icon="mdi:bluetooth-transfer",
-)
-
-RESTORED_DESCRIPTIONS: Final[
-    tuple[tuple[SensorEntityDescription, ValueGetter], ...]
-] = (
-    (WEIGHT_DESCRIPTION, lambda state: state.weight_kg),
-    (IMPEDANCE_DESCRIPTION, lambda state: state.impedance_ohm),
-    (HEART_RATE_DESCRIPTION, lambda state: state.heart_rate_bpm),
-    (LAST_MEASUREMENT_DESCRIPTION, lambda state: state.last_measurement_at),
 )
 
 CALCULATED_DESCRIPTIONS: Final[
@@ -301,10 +283,6 @@ class _EufyScaleEntityMixin:
         """Apply a state update in subclasses."""
         raise NotImplementedError
 
-    def _subscribe_for_test(self) -> None:
-        """Subscribe without adding to HA; intentionally private test seam."""
-        self._data.device.register_callback(self._handle_device_update)
-
     @override
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
@@ -478,10 +456,6 @@ class EufyScaleCalculatedSensor(SensorEntity):
     @callback
     def _handle_composition_update(self, _result: BodyCompositionResult | None) -> None:
         self.async_write_ha_state()
-
-    def _subscribe_for_test(self) -> None:
-        """Subscribe without adding to HA; intentionally private test seam."""
-        self._data.composition.register_callback(self._handle_composition_update)
 
     @override
     async def async_added_to_hass(self) -> None:

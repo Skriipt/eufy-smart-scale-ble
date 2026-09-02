@@ -2,6 +2,8 @@
 
 from datetime import UTC, datetime
 
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+
 from custom_components.eufy_smart_scale_ble.body_composition import (
     BodyCompositionProfile,
     Sex,
@@ -19,7 +21,6 @@ from custom_components.eufy_smart_scale_ble.protocols.base import (
     MeasurementPhase,
 )
 from custom_components.eufy_smart_scale_ble.sensor import async_setup_entry
-from tests.common import MockConfigEntry
 
 ADDRESS = ":".join(["02", "00", "00", "00", "00", "01"])
 PROFILE = BodyCompositionProfile(sex=Sex.MALE, height_cm=180, age=35)
