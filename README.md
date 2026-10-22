@@ -83,14 +83,14 @@ changed.
 
 ### During a weigh-in
 
-The integration separates live readings from completed measurements and never
-combines values from different sessions:
+The integration separates live readings from completed measurements and uses
+measurement phases and a 30-second window to correlate weight and impedance:
 
 - A weight-only session updates the completed weight without reusing older
   impedance.
-- A complete session pairs final weight and impedance only when both belong to
-  the same weigh-in and arrive within 30 seconds, then updates the calculated
-  body-composition values.
+- A complete session pairs final weight and impedance within that window, then
+  updates the calculated body-composition values. A changed final weight starts
+  a new session without inheriting the preceding weight's impedance.
 - A partial session leaves the previous calculated values in place rather than
   replacing them with incomplete data.
 
@@ -177,20 +177,39 @@ Models that advertise sufficient data are handled passively through Home
 Assistant's Bluetooth stack. The integration opens short-lived GATT connections
 only for models or optional metrics that require them.
 
-GATT connection attempts are debounced, each connection is capped at 30 seconds,
-and a completed measurement shortens the remaining lifetime to at most 5 seconds.
+GATT connection attempts are debounced and setup times out after 30 seconds.
+Established connections are scheduled to disconnect within 30 seconds; a
+completed measurement shortens that deadline to at most 5 seconds. Disconnect
+cleanup has a separate 5-second timeout. Unloading the integration cancels
+pending connection work.
 
-Model-specific parsing and session handling prevent duplicate, stale, malformed,
-or out-of-order packets from overwriting a newer completed result.
+Advertisement-based measurements also work through proxies that cannot make
+active connections. GATT measurements require a connectable adapter or proxy.
+Live/status entities follow Bluetooth availability; completed measurements
+remain available while the scale sleeps.
+
+P3 parsing filters duplicate and older counters within a running integration
+instance. Other protocol families do not yet have equally verified packet
+ordering or session identity. Delayed frames, multiple cached manufacturer
+payloads, or consecutive weigh-ins without an observed live phase can remain
+ambiguous. These protections cannot guarantee correct correlation for every
+firmware or packet order; see the
+[engineering audit](docs/engineering-audit-2026-10-22.md) for reproduction and
+hardware verification work.
 
 ## Privacy and diagnostics
 
 - Parsing and body-composition calculations run locally in Home Assistant.
 - The integration does not connect to Eufy's cloud or request an Eufy account,
   credentials, or API access.
-- Profile data remains in the Home Assistant config entry. The latest complete
-  weight-and-impedance pair is stored in Home Assistant storage for restoration
-  and local recalculation.
+- Profile data remains in the Home Assistant config entry and is not copied
+  into calculated sensor attributes. Measurement values and input timestamps
+  are visible in entity state and may be retained by Recorder and backups.
+- The latest complete weight-and-impedance pair is stored locally for
+  recalculation, written with owner-only permissions, and removed when the
+  config entry is deleted. Existing files receive the new permissions on their
+  next write; historical Recorder data, old profile attributes, and backups
+  are not erased by this change.
 - Standard Home Assistant diagnostics exclude Bluetooth addresses, raw packets,
   measurements, profile fields, and precise measurement timestamps. They contain
   only model, protocol, capability, parser/session, and connection metadata.

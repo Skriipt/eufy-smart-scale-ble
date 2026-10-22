@@ -1,11 +1,18 @@
 """Capability-gated sensor entity tests."""
 
 from datetime import UTC, datetime
+from unittest.mock import Mock
 
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+import pytest
+from homeassistant.core import State
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    mock_restore_cache_with_extra_data,
+)
 
 from custom_components.eufy_smart_scale_ble.body_composition import (
     BodyCompositionProfile,
+    BodyMeasurement,
     Sex,
 )
 from custom_components.eufy_smart_scale_ble.composition_manager import (
@@ -20,7 +27,13 @@ from custom_components.eufy_smart_scale_ble.protocols.base import (
     MeasurementEvent,
     MeasurementPhase,
 )
-from custom_components.eufy_smart_scale_ble.sensor import async_setup_entry
+from custom_components.eufy_smart_scale_ble.sensor import (
+    WEIGHT_DESCRIPTION,
+    EufyScalePacketStatusSensor,
+    EufyScaleRealTimeWeightSensor,
+    EufyScaleRestoredSensor,
+    async_setup_entry,
+)
 
 ADDRESS = ":".join(["02", "00", "00", "00", "00", "01"])
 PROFILE = BodyCompositionProfile(sex=Sex.MALE, height_cm=180, age=35)
@@ -129,3 +142,71 @@ async def test_c20_experimental_composition_is_opt_in() -> None:
     assert bmi.native_value == 24.1
     assert bmi.extra_state_attributes["algorithm_basis_model"] == "T9150"
     assert bmi.extra_state_attributes["model_support"] == "experimental"
+    assert not any(key.startswith("profile_") for key in bmi.extra_state_attributes)
+
+
+async def test_old_composition_pair_does_not_replace_restored_weight(hass) -> None:
+    data = runtime("eufy T9150", PROFILE)
+    old_pair = BodyMeasurement(60.0, 500.0, datetime(2026, 8, 20, tzinfo=UTC))
+    data.device = EufyScaleDevice(restored_measurement=old_pair)
+    sensor = EufyScaleRestoredSensor(
+        data, WEIGHT_DESCRIPTION, lambda state: state.weight_kg
+    )
+    sensor.hass = hass
+    sensor.entity_id = "sensor.synthetic_weight"
+    mock_restore_cache_with_extra_data(
+        hass,
+        [
+            (
+                State(sensor.entity_id, "80.0"),
+                {"native_value": 80.0, "native_unit_of_measurement": "kg"},
+            )
+        ],
+    )
+    sensor.async_write_ha_state = Mock()
+    await sensor.async_added_to_hass()
+    assert sensor.native_value == 80.0
+    data.device.process_event(MeasurementEvent(MeasurementPhase.LIVE, weight_kg=81.0))
+    assert sensor.native_value == 80.0
+    data.device.process_event(MeasurementEvent(MeasurementPhase.LOCKED, weight_kg=81.0))
+    assert sensor.native_value == 81.0
+    assert data.device.state.body_measurement == old_pair
+
+
+@pytest.mark.parametrize(
+    "sensor_type", [EufyScaleRealTimeWeightSensor, EufyScalePacketStatusSensor]
+)
+async def test_passive_presence_loss_and_return_publish_state(
+    hass, monkeypatch, sensor_type
+):
+    data = runtime("eufy T9150")
+    sensor = sensor_type(data)
+    sensor.hass = hass
+    present = True
+    availability = Mock(
+        side_effect=lambda _hass, _address, connectable: present and not connectable
+    )
+    unavailable = Mock(return_value=Mock())
+    advertisement = Mock(return_value=Mock())
+    monkeypatch.setattr(
+        "custom_components.eufy_smart_scale_ble.sensor.async_address_present",
+        availability,
+    )
+    monkeypatch.setattr(
+        "custom_components.eufy_smart_scale_ble.sensor.async_track_unavailable",
+        unavailable,
+    )
+    monkeypatch.setattr(
+        "custom_components.eufy_smart_scale_ble.sensor.async_register_callback",
+        advertisement,
+    )
+    published = []
+    sensor.async_write_ha_state = lambda: published.append(sensor.available)
+    await sensor.async_added_to_hass()
+    assert sensor.available
+    present = False
+    unavailable.call_args.args[1](None)
+    present = True
+    advertisement.call_args.args[1](None, None)
+    assert published == [False, True]
+    assert unavailable.call_args.kwargs["connectable"] is False

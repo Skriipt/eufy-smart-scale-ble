@@ -6,7 +6,12 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any, Final, override
 
-from homeassistant.components.bluetooth import async_address_present
+from homeassistant.components.bluetooth import (
+    BluetoothScanningMode,
+    async_address_present,
+    async_register_callback,
+    async_track_unavailable,
+)
 from homeassistant.components.sensor import (
     RestoreSensor,
     SensorDeviceClass,
@@ -27,7 +32,7 @@ from .body_composition import (
     BodyType,
 )
 from .const import DOMAIN, MANUFACTURER
-from .model_registry import Capability, capability_enabled
+from .model_registry import Capability, TransportMode, capability_enabled
 from .models import EufyScaleRuntimeData, ScaleState
 
 ValueType = float | int | str | datetime | None
@@ -263,6 +268,7 @@ class _EufyScaleEntityMixin:
 
     _attr_has_entity_name = True
     _attr_should_poll = False
+    _track_bluetooth_presence = False
 
     def __init__(
         self,
@@ -273,6 +279,7 @@ class _EufyScaleEntityMixin:
         self._data = data
         self._attr_unique_id = f"{_normalized_address(data.address)}_{description.key}"
         self._attr_device_info = _device_info(data)
+        self._connectable = data.model.transport is TransportMode.GATT
 
     @callback
     def _handle_device_update(self, state: ScaleState) -> None:
@@ -289,6 +296,24 @@ class _EufyScaleEntityMixin:
         self.async_on_remove(
             self._data.device.register_callback(self._handle_device_update)
         )
+        if self._track_bluetooth_presence:
+            # Presence changes can occur without a new accepted measurement.
+            self.async_on_remove(
+                async_track_unavailable(
+                    self.hass,
+                    lambda _info: self.async_write_ha_state(),
+                    self._data.address,
+                    connectable=self._connectable,
+                )
+            )
+            self.async_on_remove(
+                async_register_callback(
+                    self.hass,
+                    lambda _info, _change: self.async_write_ha_state(),
+                    {"address": self._data.address, "connectable": self._connectable},
+                    BluetoothScanningMode.PASSIVE,
+                )
+            )
 
 
 class EufyScaleRestoredSensor(_EufyScaleEntityMixin, RestoreSensor):
@@ -331,13 +356,15 @@ class EufyScaleRestoredSensor(_EufyScaleEntityMixin, RestoreSensor):
 class EufyScaleRealTimeWeightSensor(_EufyScaleEntityMixin, SensorEntity):
     """Live weight while the user is standing on the scale."""
 
+    _track_bluetooth_presence = True
+
     def __init__(self, data: EufyScaleRuntimeData) -> None:
         super().__init__(data, REAL_TIME_WEIGHT_DESCRIPTION)
 
     @property
     @override
     def available(self) -> bool:
-        return async_address_present(self.hass, self._data.address)
+        return async_address_present(self.hass, self._data.address, self._connectable)
 
     @property
     @override
@@ -368,13 +395,15 @@ class EufyScaleBatterySensor(_EufyScaleEntityMixin, SensorEntity):
 class EufyScalePacketStatusSensor(_EufyScaleEntityMixin, SensorEntity):
     """Diagnostic view of the last accepted protocol/session state."""
 
+    _track_bluetooth_presence = True
+
     def __init__(self, data: EufyScaleRuntimeData) -> None:
         super().__init__(data, PACKET_STATUS_DESCRIPTION)
 
     @property
     @override
     def available(self) -> bool:
-        return async_address_present(self.hass, self._data.address)
+        return async_address_present(self.hass, self._data.address, self._connectable)
 
     @property
     @override
@@ -428,7 +457,6 @@ class EufyScaleCalculatedSensor(SensorEntity):
     @override
     def extra_state_attributes(self) -> dict[str, Any]:
         manager = self._data.composition
-        profile = manager.profile
         measurement = manager.measurement
         return {
             "source": "locally_calculated",
@@ -447,10 +475,6 @@ class EufyScaleCalculatedSensor(SensorEntity):
             "measurement_timestamp": (
                 measurement.measured_at.isoformat() if measurement is not None else None
             ),
-            "profile_sex": profile.sex.value if profile is not None else None,
-            "profile_height_cm": profile.height_cm if profile is not None else None,
-            "profile_age": profile.age if profile is not None else None,
-            "profile_mode": profile.mode.value if profile is not None else None,
         }
 
     @callback

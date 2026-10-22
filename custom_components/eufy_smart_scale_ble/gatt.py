@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Callable
+from contextlib import suppress
 from typing import Any
 
 from .model_registry import ScaleModelDefinition
@@ -21,6 +22,8 @@ _LOGGER = logging.getLogger(__name__)
 _BATTERY_UUID = "00002a19-0000-1000-8000-00805f9b34fb"
 _ONEBYONE_NOTIFY = "0000fff4-0000-1000-8000-00805f9b34fb"
 _CONNECT_DEBOUNCE_SECONDS = 5
+_CONNECT_TIMEOUT_SECONDS = 30
+_DISCONNECT_TIMEOUT_SECONDS = 5
 _MAX_CONNECTION_SECONDS = 30
 _FINAL_DISCONNECT_SECONDS = 5
 
@@ -53,15 +56,22 @@ class EufyGattSession:
         self._disconnect_timer: asyncio.TimerHandle | None = None
         self._connect_not_before = 0.0
         self._request_pending = False
+        self._connect_task: asyncio.Task[None] | None = None
+        self._stopped = False
+        self._disconnecting = False
 
     def request_connection(self) -> bool:
         """Schedule one rate-limited connection attempt."""
         if not self._reserve_connection():
             return False
-        self._hass.async_create_task(self.async_ensure_connected(_reserved=True))
+        self._connect_task = self._hass.async_create_task(
+            self.async_ensure_connected(_reserved=True)
+        )
         return True
 
     def _reserve_connection(self) -> bool:
+        if self._stopped or self._disconnecting:
+            return False
         if self._client is not None and self._client.is_connected:
             return False
         loop = asyncio.get_running_loop()
@@ -78,22 +88,27 @@ class EufyGattSession:
     async def async_ensure_connected(self, *, _reserved: bool = False) -> None:
         if not _reserved and not self._reserve_connection():
             return
+        self._connect_task = asyncio.current_task()
         try:
             async with self._lock:
+                if self._stopped:
+                    return
                 if self._client is not None and self._client.is_connected:
                     return
                 try:
-                    await self._async_connect()
+                    async with asyncio.timeout(_CONNECT_TIMEOUT_SECONDS):
+                        await self._async_connect()
                 except Exception as err:
                     if self._on_failure is not None:
                         self._on_failure()
                     _LOGGER.debug(
                         "GATT connection failed for %s: %s",
                         self._model.model_name,
-                        err,
+                        type(err).__name__,
                     )
         finally:
             self._request_pending = False
+            self._connect_task = None
 
     async def _async_connect(self) -> None:
         from bleak_retry_connector import (
@@ -120,29 +135,38 @@ class EufyGattSession:
                 or ble_device
             ),
         )
-        notify = self._resolve_notify(client.services)
-        if notify is None:
-            await client.disconnect()
-            raise RuntimeError("required notify characteristic not found")
         self._client = client
-        self._schedule_disconnect(_MAX_CONNECTION_SECONDS)
-        await client.start_notify(notify, self._notification)
-        battery = client.services.get_characteristic(_BATTERY_UUID)
-        if battery is not None:
-            try:
-                value = await client.read_gatt_char(battery)
-                if len(value) == 1 and 0 <= value[0] <= 100:
-                    self._on_event(
-                        MeasurementEvent(
-                            phase=MeasurementPhase.LIVE,
-                            battery_percent=value[0],
-                            status="battery",
+        try:
+            notify = self._resolve_notify(client.services)
+            if notify is None:
+                raise RuntimeError("required notify characteristic not found")
+            self._schedule_disconnect(_MAX_CONNECTION_SECONDS)
+
+            def notification(sender: Any, data: bytearray) -> None:
+                if self._client is client and not self._stopped:
+                    self._notification(sender, data)
+
+            await client.start_notify(notify, notification)
+            battery = client.services.get_characteristic(_BATTERY_UUID)
+            if battery is not None:
+                try:
+                    value = await client.read_gatt_char(battery)
+                    if len(value) == 1 and 0 <= value[0] <= 100:
+                        self._on_event(
+                            MeasurementEvent(
+                                phase=MeasurementPhase.LIVE,
+                                battery_percent=value[0],
+                                status="battery",
+                            )
                         )
-                    )
-            except Exception:
-                pass
-        if self._on_connect is not None:
-            self._on_connect()
+                except Exception:
+                    pass
+            if self._on_connect is not None:
+                self._on_connect()
+        except BaseException:
+            # Cancellation (including unload/timeout) also owns client cleanup.
+            await self._async_disconnect_client()
+            raise
 
     def _matches_model_identity(self, ble_device: Any) -> bool:
         """Reject an explicit model-name conflict; nameless proxies stay usable."""
@@ -189,19 +213,52 @@ class EufyGattSession:
             self._disconnect_timer.cancel()
         self._disconnect_timer = loop.call_at(
             deadline,
-            lambda: self._hass.async_create_task(self.async_stop()),
+            lambda: self._hass.async_create_task(self._async_disconnect()),
         )
 
-    def _disconnected(self, _client: Any) -> None:
+    def _disconnected(self, client: Any) -> None:
+        if client is not self._client:
+            return
         self._client = None
         if self._disconnect_timer is not None:
             self._disconnect_timer.cancel()
             self._disconnect_timer = None
 
     async def async_stop(self) -> None:
+        """Permanently stop this transport when its entry unloads or HA stops."""
+        self._stopped = True
+        await self._async_disconnect()
+
+    async def _async_disconnect(self) -> None:
+        self._disconnecting = True
+        try:
+            task = self._connect_task
+            if (
+                task is not None
+                and task is not asyncio.current_task()
+                and not task.done()
+            ):
+                if not task.cancelling():
+                    task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await task
+            async with self._lock:
+                await self._async_disconnect_client()
+        finally:
+            self._request_pending = False
+            self._disconnecting = False
+            self._connect_not_before = (
+                asyncio.get_running_loop().time() + _CONNECT_DEBOUNCE_SECONDS
+            )
+
+    async def _async_disconnect_client(self) -> None:
         if self._disconnect_timer is not None:
             self._disconnect_timer.cancel()
             self._disconnect_timer = None
         client, self._client = self._client, None
         if client is not None and client.is_connected:
-            await client.disconnect()
+            try:
+                async with asyncio.timeout(_DISCONNECT_TIMEOUT_SECONDS):
+                    await client.disconnect()
+            except Exception as err:
+                _LOGGER.debug("GATT disconnect failed: %s", type(err).__name__)
