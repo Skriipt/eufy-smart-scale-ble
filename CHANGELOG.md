@@ -4,7 +4,7 @@ All notable changes to this project are documented in this file.
 
 The project follows semantic versioning. HACS versions are published as GitHub Releases using `v<version>` tags.
 
-## [Unreleased]
+## [0.3.5] - 2026-10-22
 
 ### Fixed
 
