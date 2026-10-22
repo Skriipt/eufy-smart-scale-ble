@@ -33,6 +33,9 @@
       "connectable": false
     }
   ],
+  "categories": [
+    "health_wellbeing"
+  ],
   "codeowners": [
     "@Skriipt"
   ],
@@ -45,5 +48,5 @@
   "iot_class": "local_push",
   "issue_tracker": "https://github.com/Skriipt/eufy-smart-scale-ble/issues",
   "requirements": [],
-  "version": "0.3.5"
+  "version": "0.3.6"
 }

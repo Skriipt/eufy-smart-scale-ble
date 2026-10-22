@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 The project follows semantic versioning. HACS versions are published as GitHub Releases using `v<version>` tags.
 
+## [0.3.6] - 2026-10-22
+
+### Changed
+
+- Categorize the integration under Health & wellbeing for discovery in HACS and the Home Assistant Marketplace.
+
 ## [0.3.5] - 2026-10-22
 
 ### Fixed
