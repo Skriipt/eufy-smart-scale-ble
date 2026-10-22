@@ -78,6 +78,7 @@ def _store(hass: HomeAssistant, entry_id: str) -> Any:
         hass,
         _STORAGE_VERSION,
         f"{_STORAGE_KEY_PREFIX}.{entry_id}",
+        private=True,
     )
 
 
@@ -95,3 +96,8 @@ async def async_save_measurement(
 ) -> None:
     """Persist the latest complete measurement for one config entry."""
     await _store(hass, entry_id).async_save(serialize_measurement(measurement))
+
+
+async def async_remove_measurement(hass: HomeAssistant, entry_id: str) -> None:
+    """Remove the integration-owned measurement when its entry is deleted."""
+    await _store(hass, entry_id).async_remove()

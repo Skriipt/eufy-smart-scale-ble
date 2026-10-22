@@ -1,8 +1,11 @@
 """Runtime setup coverage for generic Eufy scales."""
 
+import asyncio
 from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
+import pytest
 from homeassistant.components import bluetooth
 from homeassistant.const import CONF_MODEL
 from homeassistant.core import HomeAssistant
@@ -106,7 +109,7 @@ async def test_runtime_ignores_cached_advertisement_with_conflicting_identity(
     ):
         assert await async_setup_entry(hass, entry)
     assert entry.runtime_data.device.state.weight_kg is None
-    assert register.call_args.args[2] == {"address": ADDRESS}
+    assert register.call_args.args[2] == {"address": ADDRESS, "connectable": False}
 
 
 async def test_p3_restores_valid_composition_measurement(hass: HomeAssistant) -> None:
@@ -175,3 +178,118 @@ async def test_unload_forwards_to_sensor_platform(hass: HomeAssistant) -> None:
     unload = AsyncMock(return_value=True)
     with patch.object(hass.config_entries, "async_unload_platforms", unload):
         assert await async_unload_entry(hass, entry)
+
+
+@pytest.fixture
+def setup_runtime(hass, monkeypatch):
+    monkeypatch.setattr(
+        "custom_components.eufy_smart_scale_ble.async_load_measurement",
+        AsyncMock(return_value=None),
+    )
+    monkeypatch.setattr(bluetooth, "async_last_service_info", Mock(return_value=None))
+    register = Mock(return_value=Mock())
+    monkeypatch.setattr(bluetooth, "async_register_callback", register)
+    monkeypatch.setattr(hass.config_entries, "async_forward_entry_setups", AsyncMock())
+
+    async def setup(model="eufy T9150", options=None):
+        entry = MockConfigEntry(
+            domain=DOMAIN,
+            unique_id=ADDRESS,
+            data={CONF_MODEL: model},
+            options=options or PROFILE,
+        )
+        entry.add_to_hass(hass)
+        assert await async_setup_entry(hass, entry)
+        return entry, register.call_args.args[1], register.call_args.args[2]
+
+    return setup
+
+
+@pytest.mark.parametrize(
+    "model", ["eufy T9150", "eufy T9130", "eufy T9146", "eufy T9149"]
+)
+async def test_passive_proxy_matches_runtime_subscription(setup_runtime, model) -> None:
+    from homeassistant.components.bluetooth.match import ble_device_matches
+
+    _, _, matcher = await setup_runtime(model)
+    assert ble_device_matches(matcher, SimpleNamespace(connectable=False))
+
+
+async def test_persistence_is_ordered_and_unload_waits_for_it(
+    hass, monkeypatch, setup_runtime
+):
+    from custom_components.eufy_smart_scale_ble.protocols.base import (
+        MeasurementEvent,
+        MeasurementPhase,
+    )
+
+    release = asyncio.Event()
+    started = []
+    saved = []
+
+    async def save(_hass, _entry_id, measurement):
+        started.append(measurement.weight_kg)
+        if measurement.weight_kg == 60.0:
+            await release.wait()
+        saved.append(measurement.weight_kg)
+
+    monkeypatch.setattr(
+        "custom_components.eufy_smart_scale_ble.async_save_measurement", save
+    )
+    entry, _, _ = await setup_runtime()
+    device = entry.runtime_data.device
+    for weight in (60.0, 80.0):
+        device.process_event(MeasurementEvent(MeasurementPhase.LIVE, weight_kg=weight))
+        device.process_event(
+            MeasurementEvent(
+                MeasurementPhase.LOCKED, weight_kg=weight, impedance_ohm=500.0
+            )
+        )
+    unloading = asyncio.create_task(entry._async_process_on_unload(hass))
+    try:
+        await asyncio.sleep(0)
+        assert started == [60.0]
+        assert not unloading.done()
+    finally:
+        release.set()
+        await unloading
+    assert saved == [60.0, 80.0]
+
+
+async def test_unload_clears_capture(hass, setup_runtime):
+    entry, _, _ = await setup_runtime(options={"protocol_capture": True})
+    capture = entry.runtime_data.capture
+    capture.add(b"synthetic-private-frame")
+    assert capture.frames
+    await entry._async_process_on_unload(hass)
+    assert capture.frames == ()
+
+
+async def test_runtime_exception_does_not_log_private_details(
+    setup_runtime, monkeypatch, caplog
+):
+    parser = Mock()
+    parser.parse.side_effect = ValueError("synthetic-private-payload")
+    monkeypatch.setattr(
+        "custom_components.eufy_smart_scale_ble.create_advertisement_parser",
+        lambda _model: parser,
+    )
+    _, callback, _ = await setup_runtime()
+    for _ in range(2):
+        callback(service_info("eufy T9150", {}), None)
+    assert "synthetic-private-payload" not in caplog.text
+    assert (
+        caplog.text.count("Unable to process Eufy scale Bluetooth data: ValueError")
+        == 1
+    )
+
+
+async def test_shutdown_stops_gatt(hass, setup_runtime):
+    from homeassistant.const import EVENT_HOMEASSISTANT_STOP
+
+    entry, _, _ = await setup_runtime("eufy T9120")
+    stop = AsyncMock()
+    entry.runtime_data.gatt.async_stop = stop
+    hass.bus.async_fire(EVENT_HOMEASSISTANT_STOP)
+    await hass.async_block_till_done()
+    stop.assert_awaited_once()

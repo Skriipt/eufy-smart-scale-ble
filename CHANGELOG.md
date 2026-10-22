@@ -4,6 +4,24 @@ All notable changes to this project are documented in this file.
 
 The project follows semantic versioning. HACS versions are published as GitHub Releases using `v<version>` tags.
 
+## [0.3.5] - 2026-10-22
+
+### Fixed
+
+- Prevent a changed final weight from inheriting the preceding weight's impedance; keep battery-only events and model-specific status text from resetting weigh-in sessions.
+- Preserve newer restored raw measurements independently of older composition pairs, and serialize measurement writes across entry unload.
+- Cancel pending GATT connections on unload/shutdown, bound setup and cleanup, disconnect after notification setup failures, and ignore callbacks from obsolete clients.
+- Support advertisement data through non-connectable proxies and publish live/status availability changes.
+
+### Privacy
+
+- Omit exception details and profile fields from integration logs and calculated sensor attributes, respectively.
+- Write measurement files with owner-only permissions, remove their store when an entry is deleted, and clear capture buffers on unload. Existing history/backups are not purged; existing file permissions change on the next write.
+
+### Documentation
+
+- Record the engineering audit and distinguish P3 ordering checks from unresolved cross-model session and replay limitations.
+
 ## [0.3.4] - 2026-09-02
 
 ### Changed

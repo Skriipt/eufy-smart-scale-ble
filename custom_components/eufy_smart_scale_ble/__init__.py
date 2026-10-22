@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any
 
@@ -24,7 +25,11 @@ from .model_registry import (
 )
 from .models import EufyScaleRuntimeData, ScaleState
 from .protocol_capture import ProtocolCapture
-from .storage import async_load_measurement, async_save_measurement
+from .storage import (
+    async_load_measurement,
+    async_remove_measurement,
+    async_save_measurement,
+)
 
 if TYPE_CHECKING:
     from homeassistant.config_entries import ConfigEntry
@@ -38,9 +43,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     from homeassistant.components import bluetooth as ha_bluetooth
     from homeassistant.components.bluetooth.match import (
         ADDRESS,
+        CONNECTABLE,
         BluetoothCallbackMatcher,
     )
-    from homeassistant.const import CONF_MODEL, Platform
+    from homeassistant.const import CONF_MODEL, EVENT_HOMEASSISTANT_STOP, Platform
     from homeassistant.util import dt as dt_util
 
     address = entry.unique_id
@@ -56,7 +62,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             restored_measurement = await async_load_measurement(hass, entry.entry_id)
         except Exception as err:
             _LOGGER.warning(
-                "Unable to restore the latest Eufy scale measurement: %s", err
+                "Unable to restore the latest Eufy scale measurement: %s",
+                type(err).__name__,
             )
 
     composition_enabled = capability_enabled(
@@ -81,20 +88,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         capture=capture,
     )
     entry.runtime_data = runtime
+    entry.async_on_unload(capture.clear)
+    persist_lock = asyncio.Lock()
 
     async def _async_persist(measurement: BodyMeasurement) -> None:
         try:
-            await async_save_measurement(hass, entry.entry_id, measurement)
+            # Store helpers create separate Store instances; serialize their
+            # writes so a slower older measurement cannot win the race.
+            async with persist_lock:
+                await async_save_measurement(hass, entry.entry_id, measurement)
         except Exception as err:
             _LOGGER.warning(
-                "Unable to store the latest Eufy scale measurement: %s", err
+                "Unable to store the latest Eufy scale measurement: %s",
+                type(err).__name__,
             )
 
     def _update_composition(state: ScaleState) -> None:
         measurement = state.body_measurement
         if measurement is None or not composition.update_measurement(measurement):
             return
-        hass.async_create_task(_async_persist(measurement))
+        entry.async_create_task(hass, _async_persist(measurement))
 
     entry.async_on_unload(device.register_callback(_update_composition))
 
@@ -125,13 +138,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             ),
         )
 
-        async def _async_stop_gatt() -> None:
+        async def _async_stop_gatt(_event: Any = None) -> None:
             if runtime.gatt is not None:
                 await runtime.gatt.async_stop()
 
         entry.async_on_unload(_async_stop_gatt)
+        entry.async_on_unload(
+            hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_stop_gatt)
+        )
 
-    logged_errors: set[tuple[type[BaseException], str]] = set()
+    logged_errors: set[type[BaseException]] = set()
 
     def _update_ble(service_info: Any, _change: Any) -> None:
         try:
@@ -149,16 +165,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             if runtime.gatt is not None:
                 runtime.gatt.request_connection()
         except Exception as err:
-            signature = (type(err), str(err))
+            signature = type(err)
             if signature not in logged_errors:
                 logged_errors.add(signature)
-                _LOGGER.warning("Unable to process Eufy scale Bluetooth data: %s", err)
+                _LOGGER.warning(
+                    "Unable to process Eufy scale Bluetooth data: %s",
+                    signature.__name__,
+                )
 
     entry.async_on_unload(
         ha_bluetooth.async_register_callback(
             hass,
             _update_ble,
-            BluetoothCallbackMatcher({ADDRESS: address}),
+            BluetoothCallbackMatcher(
+                {ADDRESS: address, CONNECTABLE: model.transport is TransportMode.GATT}
+            ),
             ha_bluetooth.BluetoothScanningMode.ACTIVE,
         )
     )
@@ -179,3 +200,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     from homeassistant.const import Platform
 
     return await hass.config_entries.async_unload_platforms(entry, [Platform.SENSOR])
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Delete the private measurement store along with the config entry."""
+    await async_remove_measurement(hass, entry.entry_id)

@@ -2,6 +2,8 @@
 
 from datetime import UTC, datetime, timedelta
 
+import pytest
+
 from custom_components.eufy_smart_scale_ble.body_composition import BodyMeasurement
 from custom_components.eufy_smart_scale_ble.device import EufyScaleDevice
 from custom_components.eufy_smart_scale_ble.protocols.base import (
@@ -150,3 +152,76 @@ def test_callbacks_are_idempotently_unsubscribed() -> None:
     unsubscribe()
     device.process_event(MeasurementEvent(MeasurementPhase.LIVE, weight_kg=61.0))
     assert len(calls) == 1
+
+
+@pytest.mark.parametrize("status", ["locked", "0xc5"])
+def test_different_final_weight_never_reuses_previous_impedance(status: str) -> None:
+    clock = Clock()
+    device = EufyScaleDevice(now=clock)
+    device.process_event(
+        MeasurementEvent(
+            MeasurementPhase.LOCKED,
+            weight_kg=60.0,
+            impedance_ohm=500.0,
+            status=status,
+        )
+    )
+    previous = device.state.body_measurement
+    clock.value += timedelta(seconds=5)
+    device.process_event(
+        MeasurementEvent(MeasurementPhase.LOCKED, weight_kg=80.0, status=status)
+    )
+    assert device.state.weight_kg == 80.0
+    assert device.state.last_measurement_at == clock.value
+    assert device.state.body_measurement == previous
+
+
+def test_battery_read_does_not_interrupt_weight_impedance_pair() -> None:
+    device = EufyScaleDevice()
+    device.process_event(MeasurementEvent(MeasurementPhase.LOCKED, weight_kg=60.0))
+    measured_at = device.state.last_measurement_at
+    device.process_event(
+        MeasurementEvent(MeasurementPhase.LIVE, battery_percent=80, status="battery")
+    )
+    device.process_event(
+        MeasurementEvent(MeasurementPhase.IMPEDANCE, impedance_ohm=500.0)
+    )
+    assert device.state.battery_percent == 80
+    assert device.state.body_measurement == BodyMeasurement(60.0, 500.0, measured_at)
+
+
+def test_protocol_status_text_does_not_define_session_boundaries() -> None:
+    device = EufyScaleDevice()
+    device.process_event(
+        MeasurementEvent(
+            MeasurementPhase.LIVE,
+            weight_kg=60.0,
+            impedance_ohm=500.0,
+            status="0x41",
+        )
+    )
+    device.process_event(
+        MeasurementEvent(MeasurementPhase.LIVE, weight_kg=60.0, status="0x01")
+    )
+    device.process_event(
+        MeasurementEvent(MeasurementPhase.LOCKED, weight_kg=60.0, status="0x05")
+    )
+    assert device.state.body_measurement is not None
+    assert device.state.body_measurement.impedance_ohm == 500.0
+
+
+@pytest.mark.parametrize("status", ["locked", "0xc5"])
+def test_duplicate_final_does_not_change_measurement_timestamp(status: str) -> None:
+    clock = Clock()
+    device = EufyScaleDevice(now=clock)
+    event = MeasurementEvent(
+        MeasurementPhase.LOCKED,
+        weight_kg=60.0,
+        impedance_ohm=500.0,
+        status=status,
+    )
+    device.process_event(event)
+    previous = device.state
+    clock.value += timedelta(seconds=5)
+    assert not device.process_event(event)
+    assert device.state == previous

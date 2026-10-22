@@ -28,17 +28,11 @@ class EufyScaleDevice:
         restored_measurement: BodyMeasurement | None = None,
     ) -> None:
         self._now = now
-        self._state = (
-            ScaleState(
-                weight_kg=restored_measurement.weight_kg,
-                impedance_ohm=restored_measurement.impedance_ohm,
-                last_measurement_at=restored_measurement.measured_at,
-                body_measurement=restored_measurement,
-            )
-            if restored_measurement is not None
-            else ScaleState()
-        )
+        # RestoreSensor owns the latest raw values. A persisted composition pair
+        # may predate a newer weight-only measurement and must not overwrite it.
+        self._state = ScaleState(body_measurement=restored_measurement)
         self._callbacks: list[StateCallback] = []
+        self._session_phase: MeasurementPhase | None = None
         self._session_finalized = False
         self._session_weight: float | None = None
         self._session_impedance: float | None = None
@@ -64,6 +58,7 @@ class EufyScaleDevice:
         return unsubscribe
 
     def begin_session(self) -> None:
+        self._session_phase = None
         self._session_finalized = False
         self._session_weight = None
         self._session_impedance = None
@@ -72,8 +67,24 @@ class EufyScaleDevice:
 
     def process_event(self, event: MeasurementEvent) -> bool:
         previous = self._state
-        if event.phase is MeasurementPhase.LIVE:
-            if previous.packet_status != MeasurementPhase.LIVE.value:
+        has_measurement = event.weight_kg is not None or event.impedance_ohm is not None
+        if not has_measurement:
+            # Battery reads and standalone heart-rate updates are not weigh-ins.
+            updated = replace(
+                previous,
+                heart_rate_bpm=(
+                    event.heart_rate_bpm
+                    if event.heart_rate_bpm is not None
+                    else previous.heart_rate_bpm
+                ),
+                battery_percent=(
+                    event.battery_percent
+                    if event.battery_percent is not None
+                    else previous.battery_percent
+                ),
+            )
+        elif event.phase is MeasurementPhase.LIVE:
+            if self._session_phase is not MeasurementPhase.LIVE:
                 self.begin_session()
             if event.impedance_ohm is not None:
                 self._session_impedance = event.impedance_ohm
@@ -106,7 +117,7 @@ class EufyScaleDevice:
                 timedelta() <= event_time - self._session_time <= _SAME_SESSION_WINDOW
             ):
                 self.begin_session()
-            if self._should_begin_without_live(event, previous):
+            if self._should_begin_without_live(event):
                 self.begin_session()
             if not self._session_finalized and event.weight_kg is not None:
                 self._session_time = event_time
@@ -164,6 +175,8 @@ class EufyScaleDevice:
                 else previous.sequence,
                 body_measurement=body_measurement,
             )
+        if has_measurement:
+            self._session_phase = event.phase
         if updated == previous:
             return False
         self._state = updated
@@ -171,14 +184,13 @@ class EufyScaleDevice:
             callback(updated)
         return True
 
-    def _should_begin_without_live(
-        self, event: MeasurementEvent, previous: ScaleState
-    ) -> bool:
-        if not self._session_finalized or event.phase is not MeasurementPhase.LOCKED:
+    def _should_begin_without_live(self, event: MeasurementEvent) -> bool:
+        if not self._session_finalized or event.weight_kg is None:
             return False
-        return previous.packet_status not in {
-            MeasurementPhase.LIVE.value,
-            MeasurementPhase.LOCKED.value,
-            "live",
-            "locked",
-        }
+        # A changed final weight cannot inherit impedance from the old weight,
+        # even when no intervening live advertisement was received.
+        return event.weight_kg != self._session_weight or (
+            event.phase is MeasurementPhase.LOCKED
+            and self._session_phase
+            not in {MeasurementPhase.LIVE, MeasurementPhase.LOCKED}
+        )
